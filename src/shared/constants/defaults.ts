@@ -12,6 +12,26 @@ export const DEFAULT_COLORS = [
   '#000000', // Black
 ];
 
+export const PRESENTATION_NEON_COLORS = [
+  '#ff3366', // Neon Crimson
+  '#ff9f1c', // Bright Amber
+  '#2ec4b6', // Electric Teal
+  '#00f5d4', // Cyan Pulse
+  '#7000ff', // Hyper Violet
+  '#ff007f', // Cyber Pink
+  '#ffffff', // Pure White
+  '#1e1e24', // Deep Charcoal
+];
+
+export const PRESENTATION_PASTEL_COLORS = [
+  '#ffccd5', // Soft Rose
+  '#ffe5d9', // Warm Peach
+  '#fefae0', // Buttercream
+  '#d8f3dc', // Soft Mint
+  '#caf0f8', // Ice Blue
+  '#e2eafc', // Lavender
+];
+
 export const BRUSH_SIZES = [1, 2, 4, 6, 10, 16, 24, 32];
 
 export const DEFAULT_SETTINGS: DrawingSettings = {
