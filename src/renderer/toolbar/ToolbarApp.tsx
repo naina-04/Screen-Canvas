@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Pen,
   Highlighter,
@@ -20,7 +20,12 @@ import {
   X,
   GripVertical,
   MousePointer,
+  MousePointer2,
   ChevronDown,
+  Flame,
+  Sun,
+  Layers,
+  Copy,
 } from 'lucide-react';
 import { ToolButton } from './components/ToolButton';
 import { ColorPickerPopover } from './components/ColorPickerPopover';
@@ -31,6 +36,8 @@ import {
   DrawingSettings,
   HistoryState,
   BrushStyle,
+  isNeutralTool,
+  BackdropType,
 } from '../../shared/types';
 import { DEFAULT_SETTINGS, SHORTCUTS } from '../../shared/constants/defaults';
 
@@ -42,18 +49,51 @@ export const ToolbarApp: React.FC = () => {
     elementCount: 0,
   });
 
-  const [activePopover, setActivePopover] = useState<'color' | 'size' | 'shapes' | 'display' | null>(null);
+  const [activePopover, setActivePopover] = useState<'color' | 'size' | 'shapes' | 'display' | 'backdrop' | null>(null);
   const [exportNotice, setExportNotice] = useState<string | null>(null);
+  const lastActiveDrawingToolRef = useRef<ToolType>('pen');
+
+  // Expand toolbar window height when popovers open
+  useEffect(() => {
+    window.electronAPI?.setToolbarExpanded?.(Boolean(activePopover));
+  }, [activePopover]);
 
   // Sync settings with electron main and overlay
   const updateSettings = (newSettings: Partial<DrawingSettings>) => {
     setSettings((prev) => {
       const updated = { ...prev, ...newSettings };
+      if (newSettings.activeTool && !isNeutralTool(newSettings.activeTool)) {
+        lastActiveDrawingToolRef.current = newSettings.activeTool;
+      }
       if (window.electronAPI?.updateSettings) {
         window.electronAPI.updateSettings(newSettings);
       }
       return updated;
     });
+  };
+
+  // Tool Selection State Machine
+  const handleToolSelect = (tool: ToolType) => {
+    if (isNeutralTool(tool)) {
+      updateSettings({ activeTool: 'select' });
+      return;
+    }
+
+    if (settings.activeTool === tool) {
+      // Clicking an already selected drawing tool toggles to neutral select mode
+      updateSettings({ activeTool: 'select' });
+    } else {
+      // Switching to a drawing tool: activate it and ensure drawing mode is enabled
+      lastActiveDrawingToolRef.current = tool;
+      const updates: Partial<DrawingSettings> = {
+        activeTool: tool,
+        isDrawingMode: true,
+      };
+      updateSettings(updates);
+      if (!settings.isDrawingMode && window.electronAPI?.setDrawingMode) {
+        window.electronAPI.setDrawingMode(true);
+      }
+    }
   };
 
   // Toggle drawing vs pass-through mode
@@ -62,13 +102,27 @@ export const ToolbarApp: React.FC = () => {
     if (window.electronAPI?.setDrawingMode) {
       window.electronAPI.setDrawingMode(next);
     }
-    setSettings((prev) => ({ ...prev, isDrawingMode: next }));
+    if (next && isNeutralTool(settings.activeTool)) {
+      const restored = lastActiveDrawingToolRef.current || 'pen';
+      updateSettings({ isDrawingMode: next, activeTool: restored });
+    } else {
+      setSettings((prev) => ({ ...prev, isDrawingMode: next }));
+    }
   };
 
   // Listen to IPC updates
   useEffect(() => {
     const api = window.electronAPI;
     if (!api) return;
+
+    const unsubSettings = api.onSettingsUpdated((newSettings) => {
+      setSettings((prev) => {
+        if (newSettings.activeTool && !isNeutralTool(newSettings.activeTool)) {
+          lastActiveDrawingToolRef.current = newSettings.activeTool;
+        }
+        return { ...prev, ...newSettings };
+      });
+    });
 
     const unsubMode = api.onDrawingModeChanged((enabled) => {
       setSettings((prev) => ({ ...prev, isDrawingMode: enabled }));
@@ -78,9 +132,15 @@ export const ToolbarApp: React.FC = () => {
       setHistoryState(state);
     });
 
+    const unsubNotification = api.onNotification?.((msg) => {
+      showNotice(msg);
+    });
+
     return () => {
+      unsubSettings();
       unsubMode();
       unsubHistory();
+      unsubNotification?.();
     };
   }, []);
 
@@ -99,37 +159,56 @@ export const ToolbarApp: React.FC = () => {
           else window.electronAPI?.undo();
         } else if (key === 'Y') {
           window.electronAPI?.redo();
+        } else if (key === 'C') {
+          handleCopyClipboard();
         }
         return;
       }
 
       switch (key) {
+        case 'V':
+        case 'S':
+          handleToolSelect('select');
+          break;
         case 'P':
-          updateSettings({ activeTool: 'pen' });
+          handleToolSelect('pen');
           break;
         case 'H':
-          updateSettings({ activeTool: 'highlighter' });
+          handleToolSelect('highlighter');
           break;
         case 'M':
-          updateSettings({ activeTool: 'marker' });
+          handleToolSelect('marker');
           break;
         case 'E':
-          updateSettings({ activeTool: 'eraser' });
+          handleToolSelect('eraser');
           break;
+        case 'K':
+          handleToolSelect('laser');
+          break;
+        case 'F':
+          handleToolSelect('spotlight');
+          break;
+        case 'B': {
+          const modes: BackdropType[] = ['transparent', 'whiteboard', 'blackboard', 'grid'];
+          const currentIdx = modes.indexOf(settings.backdropType || 'transparent');
+          const nextBackdrop = modes[(currentIdx + 1) % modes.length];
+          updateSettings({ backdropType: nextBackdrop });
+          break;
+        }
         case 'L':
-          updateSettings({ activeTool: 'line' });
+          handleToolSelect('line');
           break;
         case 'A':
-          updateSettings({ activeTool: 'arrow' });
+          handleToolSelect('arrow');
           break;
         case 'R':
-          updateSettings({ activeTool: 'rectangle' });
+          handleToolSelect('rectangle');
           break;
         case 'C':
-          updateSettings({ activeTool: 'circle' });
+          handleToolSelect('circle');
           break;
         case 'T':
-          updateSettings({ activeTool: 'text' });
+          handleToolSelect('text');
           break;
         case ']':
           updateSettings({ strokeWidth: Math.min(50, settings.strokeWidth + 2) });
@@ -138,14 +217,18 @@ export const ToolbarApp: React.FC = () => {
           updateSettings({ strokeWidth: Math.max(1, settings.strokeWidth - 2) });
           break;
         case 'ESCAPE':
-          setActivePopover(null);
+          if (activePopover) {
+            setActivePopover(null);
+          } else if (!isNeutralTool(settings.activeTool)) {
+            handleToolSelect('select');
+          }
           break;
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [settings.strokeWidth]);
+  }, [settings.activeTool, settings.strokeWidth, activePopover]);
 
   // Notice timeout
   const showNotice = (msg: string) => {
@@ -153,31 +236,21 @@ export const ToolbarApp: React.FC = () => {
     setTimeout(() => setExportNotice(null), 3500);
   };
 
-  const handleExportPNG = async () => {
-    if (!window.electronAPI?.exportPNG) return;
-    try {
-      const res = await window.electronAPI.exportPNG('');
-      if (res.success) {
-        showNotice('Drawing exported successfully!');
-      } else if (res.error !== 'Cancelled') {
-        showNotice(`Export failed: ${res.error}`);
-      }
-    } catch (err: any) {
-      showNotice(`Export error: ${err.message}`);
+  const handleExportPNG = () => {
+    if (window.electronAPI?.requestExportPNG) {
+      window.electronAPI.requestExportPNG();
     }
   };
 
-  const handleScreenshot = async () => {
-    if (!window.electronAPI?.captureScreenWithAnnotations) return;
-    try {
-      const res = await window.electronAPI.captureScreenWithAnnotations('');
-      if (res.success) {
-        showNotice('Screenshot saved!');
-      } else if (res.error !== 'Cancelled') {
-        showNotice(`Capture failed: ${res.error}`);
-      }
-    } catch (err: any) {
-      showNotice(`Capture error: ${err.message}`);
+  const handleScreenshot = () => {
+    if (window.electronAPI?.requestScreenshot) {
+      window.electronAPI.requestScreenshot();
+    }
+  };
+
+  const handleCopyClipboard = () => {
+    if (window.electronAPI?.requestCopyToClipboard) {
+      window.electronAPI.requestCopyToClipboard();
     }
   };
 
@@ -209,20 +282,31 @@ export const ToolbarApp: React.FC = () => {
           onClick={toggleDrawingMode}
           className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all shadow-md ${
             settings.isDrawingMode
-              ? 'bg-blue-600 text-white shadow-glow hover:bg-blue-500'
+              ? isNeutralTool(settings.activeTool)
+                ? 'bg-slate-700/90 text-blue-200 border border-blue-400/40 hover:bg-slate-600'
+                : 'bg-blue-600 text-white shadow-glow hover:bg-blue-500'
               : 'bg-emerald-600/80 text-emerald-100 hover:bg-emerald-500 ring-1 ring-emerald-400/50'
           }`}
           title={
             settings.isDrawingMode
-              ? 'Drawing Mode active (Ctrl+Shift+D to toggle)'
+              ? isNeutralTool(settings.activeTool)
+                ? 'Neutral Mode: click desktop apps or select a drawing tool (Ctrl+Shift+D)'
+                : 'Drawing Mode active (Ctrl+Shift+D to toggle)'
               : 'Pass-Through active: clicks reach desktop apps (Ctrl+Shift+D)'
           }
         >
           {settings.isDrawingMode ? (
-            <>
-              <Pen className="w-3.5 h-3.5" />
-              <span>Drawing</span>
-            </>
+            isNeutralTool(settings.activeTool) ? (
+              <>
+                <MousePointer2 className="w-3.5 h-3.5 text-blue-300" />
+                <span>Neutral</span>
+              </>
+            ) : (
+              <>
+                <Pen className="w-3.5 h-3.5" />
+                <span>Drawing</span>
+              </>
+            )
           ) : (
             <>
               <MousePointer className="w-3.5 h-3.5" />
@@ -233,13 +317,22 @@ export const ToolbarApp: React.FC = () => {
 
         <div className="w-[1px] h-6 bg-white/10 mx-0.5" />
 
+        {/* Dedicated Select / Neutral Tool */}
+        <ToolButton
+          icon={<MousePointer2 className="w-4 h-4" />}
+          label="Select / Interact"
+          shortcut={SHORTCUTS.SELECT}
+          isActive={isNeutralTool(settings.activeTool)}
+          onClick={() => handleToolSelect('select')}
+        />
+
         {/* Primary Tools */}
         <ToolButton
           icon={<Pen className="w-4 h-4" />}
           label="Pen"
           shortcut={SHORTCUTS.PEN}
           isActive={settings.activeTool === 'pen'}
-          onClick={() => updateSettings({ activeTool: 'pen' })}
+          onClick={() => handleToolSelect('pen')}
         />
 
         <ToolButton
@@ -247,7 +340,7 @@ export const ToolbarApp: React.FC = () => {
           label="Highlighter"
           shortcut={SHORTCUTS.HIGHLIGHTER}
           isActive={settings.activeTool === 'highlighter'}
-          onClick={() => updateSettings({ activeTool: 'highlighter' })}
+          onClick={() => handleToolSelect('highlighter')}
         />
 
         <ToolButton
@@ -255,7 +348,7 @@ export const ToolbarApp: React.FC = () => {
           label="Marker"
           shortcut={SHORTCUTS.MARKER}
           isActive={settings.activeTool === 'marker'}
-          onClick={() => updateSettings({ activeTool: 'marker' })}
+          onClick={() => handleToolSelect('marker')}
         />
 
         <ToolButton
@@ -263,7 +356,7 @@ export const ToolbarApp: React.FC = () => {
           label="Eraser"
           shortcut={SHORTCUTS.ERASER}
           isActive={settings.activeTool === 'eraser'}
-          onClick={() => updateSettings({ activeTool: 'eraser' })}
+          onClick={() => handleToolSelect('eraser')}
         />
 
         {/* Shapes Menu Button */}
@@ -294,7 +387,7 @@ export const ToolbarApp: React.FC = () => {
                 shortcut={SHORTCUTS.LINE}
                 isActive={settings.activeTool === 'line'}
                 onClick={() => {
-                  updateSettings({ activeTool: 'line' });
+                  handleToolSelect('line');
                   setActivePopover(null);
                 }}
               />
@@ -304,7 +397,7 @@ export const ToolbarApp: React.FC = () => {
                 shortcut={SHORTCUTS.ARROW}
                 isActive={settings.activeTool === 'arrow'}
                 onClick={() => {
-                  updateSettings({ activeTool: 'arrow' });
+                  handleToolSelect('arrow');
                   setActivePopover(null);
                 }}
               />
@@ -314,7 +407,7 @@ export const ToolbarApp: React.FC = () => {
                 shortcut={SHORTCUTS.RECTANGLE}
                 isActive={settings.activeTool === 'rectangle'}
                 onClick={() => {
-                  updateSettings({ activeTool: 'rectangle' });
+                  handleToolSelect('rectangle');
                   setActivePopover(null);
                 }}
               />
@@ -324,7 +417,7 @@ export const ToolbarApp: React.FC = () => {
                 shortcut={SHORTCUTS.CIRCLE}
                 isActive={settings.activeTool === 'circle'}
                 onClick={() => {
-                  updateSettings({ activeTool: 'circle' });
+                  handleToolSelect('circle');
                   setActivePopover(null);
                 }}
               />
@@ -338,8 +431,113 @@ export const ToolbarApp: React.FC = () => {
           label="Text Annotation"
           shortcut={SHORTCUTS.TEXT}
           isActive={settings.activeTool === 'text'}
-          onClick={() => updateSettings({ activeTool: 'text' })}
+          onClick={() => handleToolSelect('text')}
         />
+
+        <div className="w-[1px] h-6 bg-white/10 mx-0.5" />
+
+        {/* Laser Pointer (Disappearing Ink) */}
+        <ToolButton
+          icon={<Flame className="w-4 h-4 text-red-400" />}
+          label="Laser Pointer (Fading Trail)"
+          shortcut={SHORTCUTS.LASER}
+          isActive={settings.activeTool === 'laser'}
+          onClick={() => handleToolSelect('laser')}
+        />
+
+        {/* Spotlight Focus Mode */}
+        <ToolButton
+          icon={<Sun className="w-4 h-4 text-amber-300" />}
+          label="Spotlight Focus Mode"
+          shortcut={SHORTCUTS.SPOTLIGHT}
+          isActive={settings.activeTool === 'spotlight'}
+          onClick={() => handleToolSelect('spotlight')}
+        />
+
+        {/* Backdrop Canvas Switcher */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setActivePopover(activePopover === 'backdrop' ? null : 'backdrop')}
+            className={`flex items-center gap-1 px-2 h-9 rounded-xl transition-all duration-200 text-xs font-medium ${
+              settings.backdropType && settings.backdropType !== 'transparent'
+                ? 'bg-indigo-600 text-white shadow-glow'
+                : 'text-gray-300 hover:text-white hover:bg-white/10'
+            }`}
+            title="Canvas Backdrop: Whiteboard, Blackboard, Grid, Transparent (B)"
+          >
+            <Layers className="w-4 h-4" />
+            <ChevronDown className="w-3 h-3 opacity-70" />
+          </button>
+
+          {activePopover === 'backdrop' && (
+            <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 p-2 bg-[#18191d] border border-white/15 rounded-xl shadow-2xl backdrop-blur-xl z-50 flex flex-col gap-1 min-w-[140px]">
+              <button
+                type="button"
+                onClick={() => {
+                  updateSettings({ backdropType: 'transparent' });
+                  setActivePopover(null);
+                }}
+                className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-left transition-colors ${
+                  settings.backdropType === 'transparent' || !settings.backdropType
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-300 hover:bg-white/10'
+                }`}
+              >
+                <span className="w-3 h-3 rounded-full border border-white/40 bg-transparent" />
+                <span>Transparent</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  updateSettings({ backdropType: 'whiteboard' });
+                  setActivePopover(null);
+                }}
+                className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-left transition-colors ${
+                  settings.backdropType === 'whiteboard'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-300 hover:bg-white/10'
+                }`}
+              >
+                <span className="w-3 h-3 rounded-full bg-white border border-gray-400" />
+                <span>Whiteboard</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  updateSettings({ backdropType: 'blackboard' });
+                  setActivePopover(null);
+                }}
+                className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-left transition-colors ${
+                  settings.backdropType === 'blackboard'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-300 hover:bg-white/10'
+                }`}
+              >
+                <span className="w-3 h-3 rounded-full bg-[#18191d] border border-white/50" />
+                <span>Blackboard</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  updateSettings({ backdropType: 'grid' });
+                  setActivePopover(null);
+                }}
+                className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-left transition-colors ${
+                  settings.backdropType === 'grid'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-300 hover:bg-white/10'
+                }`}
+              >
+                <span className="w-3 h-3 rounded-full bg-[#18191d] border border-dashed border-white/70" />
+                <span>Dotted Grid</span>
+              </button>
+            </div>
+          )}
+        </div>
 
         <div className="w-[1px] h-6 bg-white/10 mx-0.5" />
 
@@ -446,6 +644,14 @@ export const ToolbarApp: React.FC = () => {
           icon={<Camera className="w-4 h-4" />}
           label="Capture Screen + Drawing"
           onClick={handleScreenshot}
+        />
+
+        {/* Copy Drawing to Clipboard */}
+        <ToolButton
+          icon={<Copy className="w-4 h-4" />}
+          label="Copy Drawing to Clipboard (Ctrl+C)"
+          shortcut="Ctrl+C"
+          onClick={handleCopyClipboard}
         />
 
         {/* Multi-monitor Display Switcher */}
