@@ -1,9 +1,11 @@
 import { BrowserWindow, Display } from 'electron';
 import path from 'path';
+import { ToolType, isNeutralTool } from '../../shared/types';
 
 export class OverlayWindowManager {
   private window: BrowserWindow | null = null;
   private isDrawingMode: boolean = true;
+  private activeTool: ToolType = 'pen';
   private isVisible: boolean = true;
 
   constructor(private preloadPath: string, private devUrl?: string) {}
@@ -65,6 +67,17 @@ export class OverlayWindowManager {
     this.applyDrawingMode();
   }
 
+  public setActiveTool(tool: ToolType): void {
+    this.activeTool = tool;
+    this.applyDrawingMode();
+  }
+
+  public updateInteractionState(isDrawingMode?: boolean, activeTool?: ToolType): void {
+    if (isDrawingMode !== undefined) this.isDrawingMode = isDrawingMode;
+    if (activeTool !== undefined) this.activeTool = activeTool;
+    this.applyDrawingMode();
+  }
+
   public toggleDrawingMode(): boolean {
     this.isDrawingMode = !this.isDrawingMode;
     this.applyDrawingMode();
@@ -86,13 +99,17 @@ export class OverlayWindowManager {
   private applyDrawingMode(): void {
     if (!this.window) return;
 
-    if (this.isDrawingMode) {
+    const shouldIntercept = this.isVisible && this.isDrawingMode && !isNeutralTool(this.activeTool);
+
+    if (shouldIntercept) {
       // Drawing Mode: overlay intercepts all mouse events
       this.window.setIgnoreMouseEvents(false);
       this.window.focus();
     } else {
-      // Pass-through Mode: clicks pass straight through overlay to desktop apps
+      // Neutral mode or Pass-through Mode: clicks pass straight through overlay to desktop apps
       this.window.setIgnoreMouseEvents(true, { forward: true });
+      this.window.blur();
     }
   }
 }
+
