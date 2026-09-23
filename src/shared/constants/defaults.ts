@@ -26,6 +26,8 @@ export const DEFAULT_SETTINGS: DrawingSettings = {
   fontSize: 20,
   isDrawingMode: true,
   isOverlayVisible: true,
+  backdropType: 'transparent',
+  spotlightRadius: 150,
 };
 
 export const SHORTCUTS = {
@@ -35,10 +37,14 @@ export const SHORTCUTS = {
   UNDO: 'Control+Z',
   REDO: 'Control+Y',
   REDO_ALT: 'Control+Shift+Z',
+  SELECT: 'V',
   PEN: 'P',
   HIGHLIGHTER: 'H',
   MARKER: 'M',
   ERASER: 'E',
+  LASER: 'K',
+  SPOTLIGHT: 'F',
+  BACKDROP: 'B',
   LINE: 'L',
   ARROW: 'A',
   RECTANGLE: 'R',
