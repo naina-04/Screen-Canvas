@@ -19,36 +19,13 @@ import {
   isPointNearEllipse,
   distToSegment,
 } from '../../shared/utils/geometry';
+import { applyShapeConstraint } from '../../shared/utils/snapEngine';
 
 interface DualCanvasProps {
   settings: DrawingSettings;
   historyManager: HistoryManager;
   onHistoryChange: () => void;
   onTextPrompt?: (point: Point) => void;
-}
-
-// Helper to constrain shapes to 1:1 aspect ratio or snap lines/arrows to 45° increments with Shift
-function applyShiftConstraint(start: Point, current: Point, tool: string): Point {
-  if (tool === 'line' || tool === 'arrow') {
-    const dx = current.x - start.x;
-    const dy = current.y - start.y;
-    const angle = Math.atan2(dy, dx);
-    const snapAngle = Math.round(angle / (Math.PI / 4)) * (Math.PI / 4);
-    const dist = Math.hypot(dx, dy);
-    return {
-      x: start.x + Math.cos(snapAngle) * dist,
-      y: start.y + Math.sin(snapAngle) * dist,
-    };
-  } else if (tool === 'rectangle' || tool === 'circle') {
-    const dx = current.x - start.x;
-    const dy = current.y - start.y;
-    const size = Math.max(Math.abs(dx), Math.abs(dy));
-    return {
-      x: start.x + (dx >= 0 ? size : -size),
-      y: start.y + (dy >= 0 ? size : -size),
-    };
-  }
-  return current;
 }
 
 export const DualCanvas: React.FC<DualCanvasProps> = ({
@@ -514,9 +491,12 @@ export const DualCanvas: React.FC<DualCanvasProps> = ({
       ctx.clearRect(0, 0, scratch.width, scratch.height);
       ctx.scale(dpr, dpr);
 
-      const previewEndPoint = e.shiftKey
-        ? applyShiftConstraint(startPointRef.current, point, settings.activeTool)
-        : point;
+      const previewEndPoint = applyShapeConstraint(
+        startPointRef.current,
+        point,
+        settings.activeTool,
+        e.shiftKey
+      );
 
       if (settings.activeTool === 'arrow') {
         const previewArrow: ArrowElement = {
@@ -595,9 +575,12 @@ export const DualCanvas: React.FC<DualCanvasProps> = ({
       settings.activeTool === 'circle'
     ) {
       if (startPointRef.current) {
-        const constrainedEndPoint = e.shiftKey
-          ? applyShiftConstraint(startPointRef.current, endPoint, settings.activeTool)
-          : endPoint;
+        const constrainedEndPoint = applyShapeConstraint(
+          startPointRef.current,
+          endPoint,
+          settings.activeTool,
+          e.shiftKey
+        );
 
         const element: ShapeElement = {
           id: `shape-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
@@ -618,9 +601,12 @@ export const DualCanvas: React.FC<DualCanvasProps> = ({
       }
     } else if (settings.activeTool === 'arrow') {
       if (startPointRef.current) {
-        const constrainedEndPoint = e.shiftKey
-          ? applyShiftConstraint(startPointRef.current, endPoint, settings.activeTool)
-          : endPoint;
+        const constrainedEndPoint = applyShapeConstraint(
+          startPointRef.current,
+          endPoint,
+          settings.activeTool,
+          e.shiftKey
+        );
 
         const element: ArrowElement = {
           id: `arrow-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
