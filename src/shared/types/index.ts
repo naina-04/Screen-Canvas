@@ -1,13 +1,26 @@
-export type ToolType =
+export type DrawingTool =
   | 'pen'
   | 'highlighter'
   | 'marker'
   | 'eraser'
+  | 'laser'
+  | 'spotlight'
   | 'line'
   | 'arrow'
   | 'rectangle'
   | 'circle'
   | 'text';
+
+export type ToolType = 'select' | 'none' | DrawingTool;
+
+export const isNeutralTool = (tool?: ToolType | null): boolean =>
+  tool === 'select' || tool === 'none';
+
+export const isDrawingTool = (tool?: ToolType | null): boolean =>
+  Boolean(tool && !isNeutralTool(tool));
+
+export type BackdropType = 'transparent' | 'whiteboard' | 'blackboard' | 'grid';
+
 
 export type BrushStyle = 'solid' | 'dashed' | 'dotted' | 'marker';
 
@@ -85,6 +98,8 @@ export interface DrawingSettings {
   isDrawingMode: boolean; // true = draw on screen, false = pass-through clicks to desktop
   isOverlayVisible: boolean;
   selectedDisplayId?: number;
+  backdropType?: BackdropType;
+  spotlightRadius?: number;
 }
 
 export interface IPCChannels {
@@ -138,13 +153,23 @@ export interface ElectronAPI {
   getDisplays: () => Promise<DisplayInfo[]>;
   setDisplay: (displayId: number) => Promise<boolean>;
 
-  // Export
+  // Export & Clipboard
   exportPNG: (dataUrl: string) => Promise<{ success: boolean; filePath?: string; error?: string }>;
   captureScreenWithAnnotations: (dataUrl: string) => Promise<{ success: boolean; filePath?: string; error?: string }>;
+  copyToClipboard: (dataUrl: string) => Promise<{ success: boolean; error?: string }>;
+  requestExportPNG: () => void;
+  onRequestExportPNG: (callback: () => void) => () => void;
+  requestScreenshot: () => void;
+  onRequestScreenshot: (callback: () => void) => () => void;
+  requestCopyToClipboard: () => void;
+  onRequestCopyToClipboard: (callback: () => void) => () => void;
+  showNotification: (message: string) => void;
+  onNotification: (callback: (message: string) => void) => () => void;
 
   // Window Controls
   quitApp: () => void;
   minimizeToolbar: () => void;
+  setToolbarExpanded?: (expanded: boolean) => void;
 }
 
 declare global {
