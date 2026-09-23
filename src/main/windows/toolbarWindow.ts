@@ -7,7 +7,7 @@ export class ToolbarWindowManager {
   constructor(private preloadPath: string, private devUrl?: string) {}
 
   public create(display: Display): BrowserWindow {
-    const defaultWidth = 640;
+    const defaultWidth = 880;
     const defaultHeight = 90;
     const initialX = Math.round(display.bounds.x + (display.bounds.width - defaultWidth) / 2);
     const initialY = Math.round(display.bounds.y + 28);
@@ -55,7 +55,7 @@ export class ToolbarWindowManager {
   public setExpanded(expanded: boolean): void {
     if (!this.window) return;
     const currentBounds = this.window.getBounds();
-    const targetHeight = expanded ? 220 : 90;
+    const targetHeight = expanded ? 240 : 90;
     this.window.setBounds({
       ...currentBounds,
       height: targetHeight,
