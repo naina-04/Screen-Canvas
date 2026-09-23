@@ -1,4 +1,4 @@
-import { DrawingElement, BrushStyle, PathElement, ShapeElement, ArrowElement, TextElement } from '../types';
+import { DrawingElement, BrushStyle, PathElement, ShapeElement, ArrowElement, TextElement, StampElement } from '../types';
 import { calculateArrowhead } from './geometry';
 
 /**
@@ -179,6 +179,35 @@ export function renderText(ctx: CanvasRenderingContext2D, element: TextElement) 
 }
 
 /**
+ * Render a sequential numbering stamp badge (e.g. ①, ②, ③)
+ */
+export function renderStamp(ctx: CanvasRenderingContext2D, element: StampElement) {
+  const { point, number, radius = 16, color, opacity = 1 } = element;
+  ctx.save();
+  ctx.globalAlpha = opacity;
+
+  // Outer circular badge
+  ctx.beginPath();
+  ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.fill();
+
+  // White rim border
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = '#ffffff';
+  ctx.stroke();
+
+  // Number text inside
+  ctx.fillStyle = '#ffffff';
+  ctx.font = `bold ${Math.round(radius * 1.1)}px system-ui, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(String(number), point.x, point.y);
+
+  ctx.restore();
+}
+
+/**
  * Render any drawing element
  */
 export function renderElement(ctx: CanvasRenderingContext2D, element: DrawingElement) {
@@ -198,6 +227,9 @@ export function renderElement(ctx: CanvasRenderingContext2D, element: DrawingEle
       break;
     case 'text':
       renderText(ctx, element as TextElement);
+      break;
+    case 'stamp':
+      renderStamp(ctx, element as StampElement);
       break;
   }
 }
