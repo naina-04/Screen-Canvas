@@ -1,4 +1,4 @@
-import { ipcMain, dialog, desktopCapturer, app } from 'electron';
+import { ipcMain, dialog, desktopCapturer, app, clipboard, nativeImage } from 'electron';
 import fs from 'fs';
 import { OverlayWindowManager } from '../windows/overlayWindow';
 import { ToolbarWindowManager } from '../windows/toolbarWindow';
@@ -11,10 +11,19 @@ export function registerIPCHandlers(
   displayManager: DisplayManager
 ) {
   // Sync drawing settings between toolbar and overlay
-  ipcMain.on('update-settings', (_event, settings: Partial<DrawingSettings>) => {
+  ipcMain.on('update-settings', (event, settings: Partial<DrawingSettings>) => {
+    if (settings.activeTool !== undefined || settings.isDrawingMode !== undefined) {
+      overlayManager.updateInteractionState(settings.isDrawingMode, settings.activeTool);
+    }
+
     const overlayWin = overlayManager.getWindow();
-    if (overlayWin && !overlayWin.isDestroyed()) {
+    const toolbarWin = toolbarManager.getWindow();
+
+    if (overlayWin && !overlayWin.isDestroyed() && event.sender !== overlayWin.webContents) {
       overlayWin.webContents.send('update-settings', settings);
+    }
+    if (toolbarWin && !toolbarWin.isDestroyed() && event.sender !== toolbarWin.webContents) {
+      toolbarWin.webContents.send('update-settings', settings);
     }
   });
 
@@ -157,6 +166,51 @@ export function registerIPCHandlers(
     }
   });
 
+  // Copy image to clipboard
+  ipcMain.handle('copy-to-clipboard', async (_event, dataUrl: string) => {
+    try {
+      if (!dataUrl) {
+        return { success: false, error: 'No image data provided' };
+      }
+      const image = nativeImage.createFromDataURL(dataUrl);
+      clipboard.writeImage(image);
+      return { success: true };
+    } catch (err: any) {
+      console.error('Failed to copy to clipboard:', err);
+      return { success: false, error: err.message };
+    }
+  });
+
+  // Relay export/screenshot/clipboard requests from toolbar to overlay window
+  ipcMain.on('request-export-png', () => {
+    const overlayWin = overlayManager.getWindow();
+    if (overlayWin && !overlayWin.isDestroyed()) {
+      overlayWin.webContents.send('request-export-png');
+    }
+  });
+
+  ipcMain.on('request-screenshot', () => {
+    const overlayWin = overlayManager.getWindow();
+    if (overlayWin && !overlayWin.isDestroyed()) {
+      overlayWin.webContents.send('request-screenshot');
+    }
+  });
+
+  ipcMain.on('request-copy-clipboard', () => {
+    const overlayWin = overlayManager.getWindow();
+    if (overlayWin && !overlayWin.isDestroyed()) {
+      overlayWin.webContents.send('request-copy-clipboard');
+    }
+  });
+
+  // Relay notifications to toolbar
+  ipcMain.on('show-notification', (_event, message: string) => {
+    const toolbarWin = toolbarManager.getWindow();
+    if (toolbarWin && !toolbarWin.isDestroyed()) {
+      toolbarWin.webContents.send('show-notification', message);
+    }
+  });
+
   // App controls
   ipcMain.on('quit-app', () => {
     app.quit();
@@ -165,5 +219,9 @@ export function registerIPCHandlers(
   ipcMain.on('minimize-toolbar', () => {
     const toolbarWin = toolbarManager.getWindow();
     if (toolbarWin) toolbarWin.minimize();
+  });
+
+  ipcMain.on('set-toolbar-expanded', (_event, expanded: boolean) => {
+    toolbarManager.setExpanded(expanded);
   });
 }
