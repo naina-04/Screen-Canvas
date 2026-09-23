@@ -10,12 +10,16 @@ ScreenCanvas is a high-performance desktop screen annotation application that al
 - 🖥️ **Desktop Screen Overlay**: Borderless, transparent, always-on-top overlay spanning your monitor.
 - ⚡ **Zero-Lag Pass-Through Mode (`Ctrl+Shift+D`)**: Toggle instantly between drawing on the screen and interacting with underlying desktop windows, browsers, or slides without closing your annotations.
 - 🖌️ **Comprehensive Toolset**:
-  - **Pen**: Smooth freehand strokes with quadratic Bezier curve interpolation.
-  - **Highlighter**: Realistic semi-transparent highlighting (`multiply` composite).
-  - **Marker**: Bold, chisel-styled high-visibility strokes.
-  - **Shapes**: Straight lines, directional arrows with proportional heads, rectangles, and ellipses/circles.
-  - **Text Annotations**: Click anywhere to type notes directly on screen.
-  - **Object & Stroke Eraser**: Intuitive stroke-level removal on contact.
+  - **Select / Interact (`V`)**: Dedicated neutral cursor mode with automatic desktop click-through.
+  - **Pen (`P`)**: Smooth freehand strokes with quadratic Bezier curve interpolation. Toggle to neutral mode by clicking again.
+  - **Laser Pointer (`K`)**: Disappearing glowing ink trail that automatically fades out after 1.5 seconds.
+  - **Spotlight Mode (`F`)**: Cinematic dark screen dimming with feathered radial spotlight centered on cursor (resizable with mouse wheel).
+  - **Canvas Backdrops (`B`)**: 1-click toggle between Transparent, Solid Whiteboard, Deep Blackboard, and Dotted Grid paper.
+  - **Highlighter (`H`)**: Realistic semi-transparent highlighting (`multiply` composite).
+  - **Marker (`M`)**: Bold, chisel-styled high-visibility strokes.
+  - **Shapes**: Straight lines (`L`), directional arrows (`A`), rectangles (`R`), and ellipses/circles (`C`).
+  - **Text Annotations (`T`)**: Click anywhere to type notes directly on screen.
+  - **Object & Stroke Eraser (`E`)**: Intuitive stroke-level removal on contact.
 - 🎨 **Rich Color & Size Controls**:
   - Presets (Red, Orange, Yellow, Green, Blue, Purple, Pink, White, Black).
   - Custom color picker with real-time HEX input.
@@ -37,10 +41,14 @@ ScreenCanvas is a high-performance desktop screen annotation application that al
 | `Ctrl + Shift + D` | Toggle Drawing Mode / Pass-Through Mode | **Global** |
 | `Ctrl + Shift + A` | Toggle Overlay Visibility (Hide / Show) | **Global** |
 | `Ctrl + Shift + C` | Clear All Annotations | **Global** |
-| `P` | Select Freehand Pen | App |
-| `H` | Select Highlighter | App |
-| `M` | Select Marker | App |
-| `E` | Select Eraser | App |
+| `V` / `S` | Select / Interact Tool (Neutral Mode) | App |
+| `P` | Select / Toggle Freehand Pen | App |
+| `K` | Select / Toggle Laser Pointer (Disappearing Ink) | App |
+| `F` | Select / Toggle Spotlight Focus Mode | App |
+| `B` | Cycle Canvas Backdrop (Whiteboard, Blackboard, Grid, Transparent) | App |
+| `H` | Select / Toggle Highlighter | App |
+| `M` | Select / Toggle Marker | App |
+| `E` | Select / Toggle Eraser | App |
 | `L` | Select Line Tool | App |
 | `A` | Select Arrow Tool | App |
 | `R` | Select Rectangle Tool | App |
@@ -49,7 +57,8 @@ ScreenCanvas is a high-performance desktop screen annotation application that al
 | `Ctrl + Z` | Undo | App |
 | `Ctrl + Y` / `Ctrl + Shift + Z` | Redo | App |
 | `]` / `[` | Increase / Decrease Brush Size | App |
-| `Escape` | Dismiss Popovers / Reset active tool | App |
+| `Scroll Wheel` | Expand / Shrink Spotlight Radius (Spotlight Mode) | App |
+| `Escape` | Cancel Shape Preview / Deselect to Neutral Mode | App |
 
 ---
 

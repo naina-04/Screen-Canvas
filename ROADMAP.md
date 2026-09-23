@@ -27,13 +27,13 @@ This document outlines the development roadmap and feature trajectory for **Scre
 
 ---
 
-## 🌟 Phase 2: Presentation & Whiteboard Tools (Next Milestone)
+## 🌟 Phase 2: Presentation & Whiteboard Tools (Completed ✅)
 
-- [ ] **Spotlight Tool**: Darken the screen and highlight a circular or rectangular area around the cursor.
+- [x] **Spotlight Focus Mode (`F`)**: Darken screen with a soft feathered radial spotlight cutout centered on cursor (adjustable with mouse wheel).
+- [x] **Laser Pointer / Disappearing Ink (`K`)**: Fading glowing trail that cleanly dissolves after 1.5 seconds without polluting history.
+- [x] **Canvas Backdrops (`B`)**: Quick 1-click toggle between Transparent, Solid Whiteboard, Chalkboard Blackboard, and Dotted Grid paper.
 - [ ] **Zoom / Magnifier Tool**: Instant magnification of screen sections for presentations.
 - [ ] **Number Stamp Tool**: Sequential click-to-number stamps (①, ②, ③, ④) for step-by-step presentation tutorials.
-- [ ] **Whiteboard / Blackboard Mode**: Quick toggle to turn the transparent canvas into a clean solid blackboard or whiteboard.
-- [ ] **Laser Pointer**: Fading pointer dot for live screen demonstrations.
 
 ---
 
