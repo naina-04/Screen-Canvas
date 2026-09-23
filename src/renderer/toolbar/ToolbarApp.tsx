@@ -26,11 +26,13 @@ import {
   Sun,
   Layers,
   Copy,
+  HelpCircle,
 } from 'lucide-react';
 import { ToolButton } from './components/ToolButton';
 import { ColorPickerPopover } from './components/ColorPickerPopover';
 import { SizePickerPopover } from './components/SizePickerPopover';
 import { DisplaySelector } from './components/DisplaySelector';
+import { ShortcutsModal } from './components/ShortcutsModal';
 import {
   ToolType,
   DrawingSettings,
@@ -50,6 +52,7 @@ export const ToolbarApp: React.FC = () => {
   });
 
   const [activePopover, setActivePopover] = useState<'color' | 'size' | 'shapes' | 'display' | 'backdrop' | null>(null);
+  const [showShortcuts, setShowShortcuts] = useState(false);
   const [exportNotice, setExportNotice] = useState<string | null>(null);
   const lastActiveDrawingToolRef = useRef<ToolType>('pen');
 
@@ -666,6 +669,13 @@ export const ToolbarApp: React.FC = () => {
           )}
         </div>
 
+        {/* Help & Shortcuts Guide */}
+        <ToolButton
+          icon={<HelpCircle className="w-4 h-4" />}
+          label="Keyboard Shortcuts (?)"
+          onClick={() => setShowShortcuts(true)}
+        />
+
         {/* Close App */}
         <button
           type="button"
@@ -683,6 +693,9 @@ export const ToolbarApp: React.FC = () => {
           <span>{exportNotice}</span>
         </div>
       )}
+
+      {/* Keyboard Shortcuts Modal */}
+      {showShortcuts && <ShortcutsModal onClose={() => setShowShortcuts(false)} />}
     </div>
   );
 };
