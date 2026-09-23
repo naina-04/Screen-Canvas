@@ -13,6 +13,10 @@ export class HistoryManager {
     return this.undoStack[this.undoStack.length - 1] || [];
   }
 
+  public getElements(): DrawingElement[] {
+    return this.currentElements;
+  }
+
   public addElement(element: DrawingElement): void {
     const nextState = [...this.currentElements, element];
     this.pushState(nextState);
