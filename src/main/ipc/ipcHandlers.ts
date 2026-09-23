@@ -4,6 +4,7 @@ import { OverlayWindowManager } from '../windows/overlayWindow';
 import { ToolbarWindowManager } from '../windows/toolbarWindow';
 import { DisplayManager } from '../displays/displayManager';
 import { DrawingSettings, HistoryState } from '../../shared/types';
+import { buildExportFilename, extractBase64Data } from '../../shared/utils/exportEngine';
 
 export function registerIPCHandlers(
   overlayManager: OverlayWindowManager,
@@ -98,9 +99,10 @@ export function registerIPCHandlers(
   // Export transparent PNG
   ipcMain.handle('export-png', async (_event, dataUrl: string) => {
     try {
+      const defaultFilename = buildExportFilename({ prefix: 'screencanvas-annotation' });
       const { canceled, filePath } = await dialog.showSaveDialog({
         title: 'Export Annotation',
-        defaultPath: `screencanvas-annotation-${Date.now()}.png`,
+        defaultPath: defaultFilename,
         filters: [{ name: 'PNG Image', extensions: ['png'] }],
       });
 
@@ -108,7 +110,7 @@ export function registerIPCHandlers(
         return { success: false, error: 'Cancelled' };
       }
 
-      const base64Data = dataUrl.replace(/^data:image\/png;base64,/, '');
+      const base64Data = extractBase64Data(dataUrl);
       await fs.promises.writeFile(filePath, Buffer.from(base64Data, 'base64'));
 
       return { success: true, filePath };
@@ -138,9 +140,15 @@ export function registerIPCHandlers(
       const source = sources.find((s) => s.display_id === String(selectedDisplay.id)) || sources[0];
       const screenThumbnail = source.thumbnail;
 
+      const defaultFilename = buildExportFilename({
+        prefix: 'screencanvas-screenshot',
+        width: selectedDisplay.bounds.width,
+        height: selectedDisplay.bounds.height,
+      });
+
       const { canceled, filePath } = await dialog.showSaveDialog({
         title: 'Save Annotated Screenshot',
-        defaultPath: `screencanvas-screenshot-${Date.now()}.png`,
+        defaultPath: defaultFilename,
         filters: [{ name: 'PNG Image', extensions: ['png'] }],
       });
 
@@ -154,9 +162,8 @@ export function registerIPCHandlers(
         return { success: true, filePath };
       }
 
-      // Otherwise we return the composite signal
-      // We can write the base64 or pass it to save
-      const base64Data = annotationDataUrl.replace(/^data:image\/png;base64,/, '');
+      // Otherwise write composite
+      const base64Data = extractBase64Data(annotationDataUrl);
       await fs.promises.writeFile(filePath, Buffer.from(base64Data, 'base64'));
 
       return { success: true, filePath };
