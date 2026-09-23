@@ -6,6 +6,7 @@ import {
   ShapeElement,
   ArrowElement,
   Point,
+  isNeutralTool,
 } from '../../shared/types';
 import { HistoryManager } from '../../shared/utils/HistoryManager';
 import {
@@ -24,6 +25,30 @@ interface DualCanvasProps {
   historyManager: HistoryManager;
   onHistoryChange: () => void;
   onTextPrompt?: (point: Point) => void;
+}
+
+// Helper to constrain shapes to 1:1 aspect ratio or snap lines/arrows to 45° increments with Shift
+function applyShiftConstraint(start: Point, current: Point, tool: string): Point {
+  if (tool === 'line' || tool === 'arrow') {
+    const dx = current.x - start.x;
+    const dy = current.y - start.y;
+    const angle = Math.atan2(dy, dx);
+    const snapAngle = Math.round(angle / (Math.PI / 4)) * (Math.PI / 4);
+    const dist = Math.hypot(dx, dy);
+    return {
+      x: start.x + Math.cos(snapAngle) * dist,
+      y: start.y + Math.sin(snapAngle) * dist,
+    };
+  } else if (tool === 'rectangle' || tool === 'circle') {
+    const dx = current.x - start.x;
+    const dy = current.y - start.y;
+    const size = Math.max(Math.abs(dx), Math.abs(dy));
+    return {
+      x: start.x + (dx >= 0 ? size : -size),
+      y: start.y + (dy >= 0 ? size : -size),
+    };
+  }
+  return current;
 }
 
 export const DualCanvas: React.FC<DualCanvasProps> = ({
@@ -105,6 +130,197 @@ export const DualCanvas: React.FC<DualCanvasProps> = ({
     redrawCommitted();
   }, [redrawCommitted]);
 
+  // Laser Pointer & Spotlight Presentation Refs
+  const laserTrailRef = useRef<{ x: number; y: number; time: number }[]>([]);
+  const laserCurrentPosRef = useRef<Point | null>(null);
+  const spotlightPosRef = useRef<Point | null>(null);
+  const animationFrameIdRef = useRef<number | null>(null);
+  const [spotlightRadius, setSpotlightRadius] = useState<number>(settings.spotlightRadius || 150);
+
+  // Spotlight renderer
+  const renderSpotlight = useCallback(
+    (pos: Point, radius: number) => {
+      const scratch = scratchCanvasRef.current;
+      const container = containerRef.current;
+      if (!scratch || !container) return;
+      const ctx = scratch.getContext('2d');
+      if (!ctx) return;
+
+      const dpr = window.devicePixelRatio || 1;
+      const width = container.clientWidth || window.innerWidth;
+      const height = container.clientHeight || window.innerHeight;
+
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, scratch.width, scratch.height);
+      ctx.scale(dpr, dpr);
+
+      // Darken backdrop with cinematic soft shadow
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+      ctx.fillRect(0, 0, width, height);
+
+      // Radial cutout around cursor with soft feather
+      ctx.globalCompositeOperation = 'destination-out';
+      const innerRadius = Math.max(0, radius * 0.85);
+      const grad = ctx.createRadialGradient(pos.x, pos.y, innerRadius, pos.x, pos.y, radius);
+      grad.addColorStop(0, 'rgba(0, 0, 0, 1)');
+      grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Soft rim highlight around spotlight circle
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, radius, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.restore();
+    },
+    []
+  );
+
+  // Laser Pointer 60fps decaying trail animation loop
+  const startLaserAnimation = useCallback(() => {
+    if (animationFrameIdRef.current !== null) return;
+
+    const animate = () => {
+      const scratch = scratchCanvasRef.current;
+      if (!scratch) {
+        animationFrameIdRef.current = null;
+        return;
+      }
+      const ctx = scratch.getContext('2d');
+      if (!ctx) {
+        animationFrameIdRef.current = null;
+        return;
+      }
+
+      const now = performance.now();
+      const FADE_TIME = 1500; // 1.5 seconds trail decay
+      laserTrailRef.current = laserTrailRef.current.filter((p) => now - p.time < FADE_TIME);
+
+      const dpr = window.devicePixelRatio || 1;
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, scratch.width, scratch.height);
+      ctx.scale(dpr, dpr);
+
+      const trail = laserTrailRef.current;
+      const laserColor = settings.strokeColor || '#ef4444';
+
+      if (trail.length > 1) {
+        for (let i = 0; i < trail.length - 1; i++) {
+          const p1 = trail[i];
+          const p2 = trail[i + 1];
+          const age = now - p2.time;
+          const progress = Math.max(0, Math.min(1, 1 - age / FADE_TIME));
+
+          ctx.beginPath();
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.strokeStyle = laserColor;
+          ctx.lineWidth = Math.max(2, (settings.strokeWidth || 4) * progress);
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.globalAlpha = progress;
+          ctx.shadowColor = laserColor;
+          ctx.shadowBlur = 14 * progress;
+          ctx.stroke();
+        }
+      }
+
+      // Glowing laser head tip
+      const head = laserCurrentPosRef.current || (trail.length > 0 ? trail[trail.length - 1] : null);
+      if (head && (settings.activeTool === 'laser' || trail.length > 0)) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(head.x, head.y, Math.max(5, (settings.strokeWidth || 4) * 1.5), 0, Math.PI * 2);
+        ctx.fillStyle = laserColor;
+        ctx.globalAlpha = 0.6;
+        ctx.shadowColor = laserColor;
+        ctx.shadowBlur = 18;
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(head.x, head.y, Math.max(2.5, (settings.strokeWidth || 4) * 0.75), 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.globalAlpha = 0.95;
+        ctx.fill();
+        ctx.restore();
+      }
+
+      ctx.restore();
+
+      if (trail.length > 0 || isDrawingRef.current || settings.activeTool === 'laser') {
+        animationFrameIdRef.current = requestAnimationFrame(animate);
+      } else {
+        animationFrameIdRef.current = null;
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, scratch.width, scratch.height);
+        ctx.restore();
+      }
+    };
+
+    animationFrameIdRef.current = requestAnimationFrame(animate);
+  }, [settings.strokeColor, settings.strokeWidth, settings.activeTool]);
+
+  // Cancel active interaction and clean up scratch canvas preview
+  const cancelActiveInteraction = useCallback((): boolean => {
+    const wasActive =
+      isDrawingRef.current ||
+      startPointRef.current !== null ||
+      activePointsRef.current.length > 0 ||
+      laserTrailRef.current.length > 0;
+
+    isDrawingRef.current = false;
+    startPointRef.current = null;
+    activePointsRef.current = [];
+    laserTrailRef.current = [];
+    laserCurrentPosRef.current = null;
+
+    if (animationFrameIdRef.current !== null) {
+      cancelAnimationFrame(animationFrameIdRef.current);
+      animationFrameIdRef.current = null;
+    }
+
+    const scratch = scratchCanvasRef.current;
+    if (scratch) {
+      const ctx = scratch.getContext('2d');
+      if (ctx) {
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, scratch.width, scratch.height);
+        ctx.restore();
+      }
+    }
+    return wasActive;
+  }, []);
+
+  // Cancel any active interaction when activeTool or drawingMode changes
+  useEffect(() => {
+    cancelActiveInteraction();
+  }, [settings.activeTool, settings.isDrawingMode, cancelActiveInteraction]);
+
+  // Handle Escape key to cancel in-flight drawing or shape gesture
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        const cancelled = cancelActiveInteraction();
+        if (cancelled) {
+          e.stopPropagation();
+          e.preventDefault();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, [cancelActiveInteraction]);
+
   const getCanvasPoint = (e: React.PointerEvent<HTMLCanvasElement>): Point => {
     const rect = scratchCanvasRef.current?.getBoundingClientRect();
     if (!rect) return { x: e.clientX, y: e.clientY, pressure: e.pressure };
@@ -151,7 +367,7 @@ export const DualCanvas: React.FC<DualCanvasProps> = ({
   };
 
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!settings.isDrawingMode) return;
+    if (!settings.isDrawingMode || isNeutralTool(settings.activeTool)) return;
     const scratch = scratchCanvasRef.current;
     if (!scratch) return;
 
@@ -159,6 +375,21 @@ export const DualCanvas: React.FC<DualCanvasProps> = ({
     isDrawingRef.current = true;
     const point = getCanvasPoint(e);
     startPointRef.current = point;
+
+    // Laser pointer mode
+    if (settings.activeTool === 'laser') {
+      laserCurrentPosRef.current = point;
+      laserTrailRef.current.push({ x: point.x, y: point.y, time: performance.now() });
+      startLaserAnimation();
+      return;
+    }
+
+    // Spotlight focus mode
+    if (settings.activeTool === 'spotlight') {
+      spotlightPosRef.current = point;
+      renderSpotlight(point, spotlightRadius);
+      return;
+    }
 
     if (settings.activeTool === 'text') {
       isDrawingRef.current = false;
@@ -193,6 +424,7 @@ export const DualCanvas: React.FC<DualCanvasProps> = ({
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!settings.isDrawingMode || isNeutralTool(settings.activeTool)) return;
     const scratch = scratchCanvasRef.current;
     if (!scratch) return;
     const ctx = scratch.getContext('2d');
@@ -200,6 +432,23 @@ export const DualCanvas: React.FC<DualCanvasProps> = ({
 
     const point = getCanvasPoint(e);
     const dpr = window.devicePixelRatio || 1;
+
+    // Laser pointer movement & live trail
+    if (settings.activeTool === 'laser') {
+      laserCurrentPosRef.current = point;
+      if (isDrawingRef.current) {
+        laserTrailRef.current.push({ x: point.x, y: point.y, time: performance.now() });
+      }
+      startLaserAnimation();
+      return;
+    }
+
+    // Spotlight movement
+    if (settings.activeTool === 'spotlight') {
+      spotlightPosRef.current = point;
+      renderSpotlight(point, spotlightRadius);
+      return;
+    }
 
     // Erasing while dragging
     if (isDrawingRef.current && settings.activeTool === 'eraser') {
@@ -265,12 +514,16 @@ export const DualCanvas: React.FC<DualCanvasProps> = ({
       ctx.clearRect(0, 0, scratch.width, scratch.height);
       ctx.scale(dpr, dpr);
 
+      const previewEndPoint = e.shiftKey
+        ? applyShiftConstraint(startPointRef.current, point, settings.activeTool)
+        : point;
+
       if (settings.activeTool === 'arrow') {
         const previewArrow: ArrowElement = {
           id: 'preview',
           type: 'arrow',
           startPoint: startPointRef.current,
-          endPoint: point,
+          endPoint: previewEndPoint,
           color: settings.strokeColor,
           strokeWidth: settings.strokeWidth,
           opacity: settings.opacity,
@@ -282,7 +535,7 @@ export const DualCanvas: React.FC<DualCanvasProps> = ({
           id: 'preview',
           type: settings.activeTool as 'line' | 'rectangle' | 'circle',
           startPoint: startPointRef.current,
-          endPoint: point,
+          endPoint: previewEndPoint,
           color: settings.strokeColor,
           strokeWidth: settings.strokeWidth,
           opacity: settings.opacity,
@@ -307,6 +560,12 @@ export const DualCanvas: React.FC<DualCanvasProps> = ({
     }
 
     const endPoint = getCanvasPoint(e);
+
+    // Special handling for laser & spotlight: do not commit to vector history
+    if (settings.activeTool === 'laser' || settings.activeTool === 'spotlight') {
+      startPointRef.current = null;
+      return;
+    }
 
     // Commit freehand stroke
     if (
@@ -336,11 +595,15 @@ export const DualCanvas: React.FC<DualCanvasProps> = ({
       settings.activeTool === 'circle'
     ) {
       if (startPointRef.current) {
+        const constrainedEndPoint = e.shiftKey
+          ? applyShiftConstraint(startPointRef.current, endPoint, settings.activeTool)
+          : endPoint;
+
         const element: ShapeElement = {
           id: `shape-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
           type: settings.activeTool,
           startPoint: startPointRef.current,
-          endPoint,
+          endPoint: constrainedEndPoint,
           color: settings.strokeColor,
           strokeWidth: settings.strokeWidth,
           opacity: settings.opacity,
@@ -355,11 +618,15 @@ export const DualCanvas: React.FC<DualCanvasProps> = ({
       }
     } else if (settings.activeTool === 'arrow') {
       if (startPointRef.current) {
+        const constrainedEndPoint = e.shiftKey
+          ? applyShiftConstraint(startPointRef.current, endPoint, settings.activeTool)
+          : endPoint;
+
         const element: ArrowElement = {
           id: `arrow-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
           type: 'arrow',
           startPoint: startPointRef.current,
-          endPoint,
+          endPoint: constrainedEndPoint,
           color: settings.strokeColor,
           strokeWidth: settings.strokeWidth,
           opacity: settings.opacity,
@@ -386,16 +653,41 @@ export const DualCanvas: React.FC<DualCanvasProps> = ({
     startPointRef.current = null;
   };
 
+  // Adjust spotlight radius with mouse wheel
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (settings.activeTool === 'spotlight') {
+      const delta = e.deltaY < 0 ? 15 : -15;
+      const nextRadius = Math.max(50, Math.min(450, spotlightRadius + delta));
+      setSpotlightRadius(nextRadius);
+      if (spotlightPosRef.current) {
+        renderSpotlight(spotlightPosRef.current, nextRadius);
+      }
+    }
+  };
+
+  // Auto-render spotlight when switched to spotlight tool
+  useEffect(() => {
+    if (settings.activeTool === 'spotlight') {
+      const width = containerRef.current?.clientWidth || window.innerWidth;
+      const height = containerRef.current?.clientHeight || window.innerHeight;
+      const pos = spotlightPosRef.current || { x: width / 2, y: height / 2 };
+      spotlightPosRef.current = pos;
+      renderSpotlight(pos, spotlightRadius);
+    }
+  }, [settings.activeTool, spotlightRadius, renderSpotlight]);
+
   const getCursor = () => {
-    if (!settings.isDrawingMode) return 'default';
+    if (!settings.isDrawingMode || isNeutralTool(settings.activeTool)) return 'default';
     switch (settings.activeTool) {
+      case 'laser':
+      case 'eraser':
+      case 'spotlight':
+        return 'none'; // Custom rendered indicators
       case 'pen':
       case 'marker':
         return 'crosshair';
       case 'highlighter':
         return 'cell';
-      case 'eraser':
-        return 'none'; // We render our own circular eraser ring
       case 'text':
         return 'text';
       case 'line':
@@ -404,19 +696,41 @@ export const DualCanvas: React.FC<DualCanvasProps> = ({
       case 'circle':
         return 'crosshair';
       default:
-        return 'crosshair';
+        return 'default';
     }
   };
 
   return (
     <div
       ref={containerRef}
+      onWheel={handleWheel}
       className="relative w-full h-full select-none"
       style={{
-        pointerEvents: settings.isDrawingMode ? 'auto' : 'none',
+        pointerEvents: settings.isDrawingMode && !isNeutralTool(settings.activeTool) ? 'auto' : 'none',
         cursor: getCursor(),
       }}
     >
+      {/* Backdrop Canvas Layer: Whiteboard / Blackboard / Grid */}
+      <div
+        className={`absolute inset-0 transition-colors duration-200 pointer-events-none ${
+          settings.backdropType === 'whiteboard'
+            ? 'bg-[#fcfdfd]'
+            : settings.backdropType === 'blackboard'
+            ? 'bg-[#18191d]'
+            : settings.backdropType === 'grid'
+            ? 'bg-[#18191d]'
+            : 'bg-transparent'
+        }`}
+        style={
+          settings.backdropType === 'grid'
+            ? {
+                backgroundImage:
+                  'radial-gradient(circle, rgba(255, 255, 255, 0.22) 1.5px, transparent 1.5px)',
+                backgroundSize: '24px 24px',
+              }
+            : undefined
+        }
+      />
       <canvas
         ref={committedCanvasRef}
         className="absolute top-0 left-0 w-full h-full pointer-events-none"
