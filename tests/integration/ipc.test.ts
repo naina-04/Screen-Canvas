@@ -23,6 +23,7 @@ describe('ScreenCanvas Integration & State Sync', () => {
     expect(SHORTCUTS.TOGGLE_DRAWING_MODE).toBe('Control+Shift+D');
     expect(SHORTCUTS.TOGGLE_OVERLAY).toBe('Control+Shift+A');
     expect(SHORTCUTS.CLEAR_ALL).toBe('Control+Shift+C');
+    expect(SHORTCUTS.SELECT).toBe('V');
     expect(SHORTCUTS.PEN).toBe('P');
     expect(SHORTCUTS.ERASER).toBe('E');
     expect(SHORTCUTS.HIGHLIGHTER).toBe('H');
@@ -77,6 +78,17 @@ describe('ScreenCanvas Integration & State Sync', () => {
     expect(merged.activeTool).toBe('highlighter');
     expect(merged.strokeWidth).toBe(16);
     expect(merged.strokeColor).toBe(DEFAULT_SETTINGS.strokeColor);
+    expect(DEFAULT_SETTINGS.activeTool).toBe('pen');
+  });
+
+  it('supports updating settings with neutral select tool', () => {
+    const customUpdate: Partial<DrawingSettings> = {
+      activeTool: 'select',
+    };
+    const merged = { ...DEFAULT_SETTINGS, ...customUpdate };
+
+    expect(merged.activeTool).toBe('select');
+    expect(merged.isDrawingMode).toBe(true);
     expect(DEFAULT_SETTINGS.activeTool).toBe('pen');
   });
 });
