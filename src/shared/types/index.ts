@@ -9,7 +9,8 @@ export type DrawingTool =
   | 'arrow'
   | 'rectangle'
   | 'circle'
-  | 'text';
+  | 'text'
+  | 'stamp';
 
 export type ToolType = 'select' | 'none' | DrawingTool;
 
@@ -70,7 +71,14 @@ export interface TextElement extends BaseElement {
   fontFamily?: string;
 }
 
-export type DrawingElement = PathElement | ShapeElement | ArrowElement | TextElement;
+export interface StampElement extends BaseElement {
+  type: 'stamp';
+  point: Point;
+  number: number;
+  radius: number;
+}
+
+export type DrawingElement = PathElement | ShapeElement | ArrowElement | TextElement | StampElement;
 
 export interface DisplayInfo {
   id: number;
