@@ -70,10 +70,35 @@ const api: ElectronAPI = {
   getDisplays: () => ipcRenderer.invoke('get-displays'),
   setDisplay: (displayId: number) => ipcRenderer.invoke('set-display', displayId),
 
-  // Export
+  // Export & Clipboard
   exportPNG: (dataUrl: string) => ipcRenderer.invoke('export-png', dataUrl),
   captureScreenWithAnnotations: (dataUrl: string) =>
     ipcRenderer.invoke('screenshot-capture', dataUrl),
+  copyToClipboard: (dataUrl: string) => ipcRenderer.invoke('copy-to-clipboard', dataUrl),
+  requestExportPNG: () => ipcRenderer.send('request-export-png'),
+  onRequestExportPNG: (callback: () => void) => {
+    const handler = () => callback();
+    ipcRenderer.on('request-export-png', handler);
+    return () => ipcRenderer.removeListener('request-export-png', handler);
+  },
+  requestScreenshot: () => ipcRenderer.send('request-screenshot'),
+  onRequestScreenshot: (callback: () => void) => {
+    const handler = () => callback();
+    ipcRenderer.on('request-screenshot', handler);
+    return () => ipcRenderer.removeListener('request-screenshot', handler);
+  },
+  requestCopyToClipboard: () => ipcRenderer.send('request-copy-clipboard'),
+  onRequestCopyToClipboard: (callback: () => void) => {
+    const handler = () => callback();
+    ipcRenderer.on('request-copy-clipboard', handler);
+    return () => ipcRenderer.removeListener('request-copy-clipboard', handler);
+  },
+  showNotification: (message: string) => ipcRenderer.send('show-notification', message),
+  onNotification: (callback: (message: string) => void) => {
+    const handler = (_event: any, msg: string) => callback(msg);
+    ipcRenderer.on('show-notification', handler);
+    return () => ipcRenderer.removeListener('show-notification', handler);
+  },
 
   // Window Controls
   quitApp: () => {
@@ -81,6 +106,9 @@ const api: ElectronAPI = {
   },
   minimizeToolbar: () => {
     ipcRenderer.send('minimize-toolbar');
+  },
+  setToolbarExpanded: (expanded: boolean) => {
+    ipcRenderer.send('set-toolbar-expanded', expanded);
   },
 };
 
