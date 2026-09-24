@@ -105,6 +105,10 @@ export class OverlayWindowManager {
     return this.isAppActive;
   }
 
+  public getIsDrawingMode(): boolean {
+    return this.isDrawingMode && !isNeutralTool(this.activeTool);
+  }
+
   public toggleDrawingMode(): boolean {
     this.isDrawingMode = !this.isDrawingMode;
     this.applyDrawingMode();

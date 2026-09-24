@@ -5,6 +5,7 @@ import { ToolbarWindowManager } from './windows/toolbarWindow';
 import { DisplayManager } from './displays/displayManager';
 import { ShortcutManager } from './shortcuts/shortcutManager';
 import { registerIPCHandlers } from './ipc/ipcHandlers';
+import { TrayManager } from './tray/trayManager';
 
 // Single instance lock
 const gotLock = app.requestSingleInstanceLock();
@@ -16,6 +17,7 @@ let overlayManager: OverlayWindowManager;
 let toolbarManager: ToolbarWindowManager;
 let displayManager: DisplayManager;
 let shortcutManager: ShortcutManager;
+let trayManager: TrayManager;
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 const devUrl = process.env.VITE_DEV_SERVER_URL;
@@ -42,6 +44,7 @@ async function initializeApp() {
 
   // Link toolbar close to complete application teardown
   toolbarManager.setOnClose(() => {
+    trayManager?.destroy();
     overlayManager?.destroy();
     app.quit();
     setTimeout(() => {
@@ -51,6 +54,7 @@ async function initializeApp() {
 
   // Link overlay close to complete application teardown
   overlayManager.setOnClose(() => {
+    trayManager?.destroy();
     toolbarManager?.destroy();
     app.quit();
     setTimeout(() => {
@@ -113,6 +117,7 @@ async function initializeApp() {
       if (oWin && !oWin.isDestroyed()) {
         oWin.hide();
       }
+      trayManager?.updateContextMenu();
     });
     toolbarWin.on('restore', () => {
       const oWin = overlayManager.getWindow();
@@ -120,6 +125,7 @@ async function initializeApp() {
         oWin.show();
       }
       handleFocus();
+      trayManager?.updateContextMenu();
     });
   }
 
@@ -143,6 +149,7 @@ async function initializeApp() {
       if (oWin && !oWin.isDestroyed()) {
         oWin.webContents.send('drawing-mode-changed', newMode);
       }
+      trayManager?.updateContextMenu();
     },
     onToggleOverlay: () => {
       overlayManager.toggleVisibility();
@@ -157,6 +164,63 @@ async function initializeApp() {
 
   shortcutManager.registerAll();
 
+  // Initialize System Tray
+  trayManager = new TrayManager();
+  trayManager.create({
+    onToggleToolbar: () => {
+      const tWin = toolbarManager.getWindow();
+      const oWin = overlayManager.getWindow();
+      if (!tWin || tWin.isDestroyed()) return;
+
+      if (tWin.isMinimized() || !tWin.isVisible()) {
+        if (tWin.isMinimized()) tWin.restore();
+        tWin.show();
+        tWin.focus();
+        if (oWin && !oWin.isDestroyed()) oWin.show();
+        overlayManager.setAppActive(true);
+      } else {
+        tWin.hide();
+        if (oWin && !oWin.isDestroyed()) oWin.hide();
+        overlayManager.setAppActive(false);
+      }
+      trayManager.updateContextMenu();
+    },
+    onToggleDrawingMode: () => {
+      const newMode = overlayManager.toggleDrawingMode();
+      const tWin = toolbarManager.getWindow();
+      const oWin = overlayManager.getWindow();
+      if (tWin && !tWin.isDestroyed()) {
+        tWin.webContents.send('drawing-mode-changed', newMode);
+      }
+      if (oWin && !oWin.isDestroyed()) {
+        oWin.webContents.send('drawing-mode-changed', newMode);
+      }
+      trayManager.updateContextMenu();
+    },
+    onClearScreen: () => {
+      const oWin = overlayManager.getWindow();
+      if (oWin && !oWin.isDestroyed()) {
+        oWin.webContents.send('clear-all');
+      }
+    },
+    onQuit: () => {
+      trayManager?.destroy();
+      overlayManager?.destroy();
+      toolbarManager?.destroy();
+      app.quit();
+      setTimeout(() => {
+        app.exit(0);
+      }, 50);
+    },
+    isToolbarVisible: () => {
+      const tWin = toolbarManager.getWindow();
+      return Boolean(tWin && !tWin.isDestroyed() && tWin.isVisible() && !tWin.isMinimized());
+    },
+    isDrawingMode: () => {
+      return overlayManager.getIsDrawingMode();
+    },
+  });
+
   // Listen to display changes
   screen.on('display-metrics-changed', () => {
     const selected = displayManager.getSelectedDisplay();
@@ -167,6 +231,7 @@ async function initializeApp() {
 app.whenReady().then(initializeApp);
 
 app.on('before-quit', () => {
+  trayManager?.destroy();
   overlayManager?.destroy();
   toolbarManager?.destroy();
 });
@@ -175,6 +240,7 @@ app.on('will-quit', () => {
   if (shortcutManager) {
     shortcutManager.unregisterAll();
   }
+  trayManager?.destroy();
   overlayManager?.destroy();
   toolbarManager?.destroy();
   setTimeout(() => {
@@ -183,6 +249,7 @@ app.on('will-quit', () => {
 });
 
 app.on('window-all-closed', () => {
+  trayManager?.destroy();
   overlayManager?.destroy();
   toolbarManager?.destroy();
   app.quit();
