@@ -110,6 +110,11 @@ const api: ElectronAPI = {
   setToolbarExpanded: (expanded: boolean) => {
     ipcRenderer.send('set-toolbar-expanded', expanded);
   },
+  onAppActiveChanged: (callback: (isActive: boolean) => void) => {
+    const handler = (_event: any, isActive: boolean) => callback(isActive);
+    ipcRenderer.on('app-active-changed', handler);
+    return () => ipcRenderer.removeListener('app-active-changed', handler);
+  },
 };
 
 contextBridge.exposeInMainWorld('electronAPI', api);
