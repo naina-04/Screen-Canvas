@@ -37,6 +37,7 @@ const EDIT_SHORTCUTS: ShortcutItem[] = [
   { keys: ['Ctrl', 'Z'], desc: 'Undo stroke / shape' },
   { keys: ['Ctrl', 'Y'], desc: 'Redo previously undone stroke' },
   { keys: ['Ctrl', 'C'], desc: 'Copy drawing snapshot to clipboard' },
+  { keys: ['Ctrl', 'S'], desc: 'Save Session Snapshot to local storage' },
   { keys: ['Ctrl', 'Q'], desc: 'Exit ScreenCanvas Application' },
   { keys: ['['], desc: 'Decrease brush stroke width' },
   { keys: [']'], desc: 'Increase brush stroke width' },
