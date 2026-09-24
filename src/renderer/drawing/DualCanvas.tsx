@@ -5,6 +5,7 @@ import {
   PathElement,
   ShapeElement,
   ArrowElement,
+  StampElement,
   Point,
   isNeutralTool,
 } from '../../shared/types';
@@ -376,6 +377,27 @@ export const DualCanvas: React.FC<DualCanvasProps> = ({
       return;
     }
 
+    if (settings.activeTool === 'stamp') {
+      isDrawingRef.current = false;
+      const num = settings.currentStampNumber || 1;
+      const stampElement: StampElement = {
+        id: `stamp-${Date.now()}-${num}`,
+        type: 'stamp',
+        point,
+        number: num,
+        radius: 18,
+        color: settings.strokeColor,
+        strokeWidth: 2,
+        opacity: settings.opacity,
+        brushStyle: 'solid',
+      };
+      historyManager.addElement(stampElement);
+      redrawCommitted();
+      onHistoryChange();
+      window.electronAPI?.updateSettings?.({ currentStampNumber: num + 1 });
+      return;
+    }
+
     if (settings.activeTool === 'eraser') {
       handleStrokeErase(point);
       return;
@@ -426,6 +448,34 @@ export const DualCanvas: React.FC<DualCanvasProps> = ({
     if (settings.activeTool === 'spotlight') {
       spotlightPosRef.current = point;
       renderSpotlight(point, spotlightRadius);
+      return;
+    }
+
+    // Render stamp badge preview under cursor
+    if (settings.activeTool === 'stamp') {
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, scratch.width, scratch.height);
+      ctx.scale(dpr, dpr);
+
+      const radius = 18;
+      const num = settings.currentStampNumber || 1;
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
+      ctx.fillStyle = settings.strokeColor;
+      ctx.globalAlpha = 0.55;
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 13px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(num), point.x, point.y);
+
+      ctx.restore();
       return;
     }
 
@@ -670,6 +720,7 @@ export const DualCanvas: React.FC<DualCanvasProps> = ({
       case 'laser':
       case 'eraser':
       case 'spotlight':
+      case 'stamp':
         return 'none'; // Custom rendered indicators
       case 'pen':
       case 'marker':
