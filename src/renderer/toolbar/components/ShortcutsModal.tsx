@@ -31,6 +31,8 @@ const TOOL_SHORTCUTS: ShortcutItem[] = [
   { keys: ['C'], desc: 'Circle / Ellipse (Hold Shift for 1:1 Circle)' },
   { keys: ['T'], desc: 'Text Annotation (Click to type notes)' },
   { keys: ['N'], desc: 'Numbered Step Badge (①, ②, ③ sequential callouts)' },
+  { keys: ['PageUp'], desc: 'Previous Slide in Presentation Deck' },
+  { keys: ['PageDown'], desc: 'Next Slide in Presentation Deck' },
 ];
 
 const EDIT_SHORTCUTS: ShortcutItem[] = [
