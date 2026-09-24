@@ -29,6 +29,7 @@ import {
   Layers,
   Copy,
   HelpCircle,
+  Stamp,
 } from 'lucide-react';
 import { ToolButton } from './components/ToolButton';
 import { ColorPickerPopover } from './components/ColorPickerPopover';
@@ -57,6 +58,7 @@ const TOOL_SEQUENCE: ToolType[] = [
   'rectangle',
   'circle',
   'text',
+  'stamp',
   'laser',
   'spotlight',
 ];
@@ -357,6 +359,9 @@ export const ToolbarApp: React.FC = () => {
         case 'T':
           handleToolSelect('text');
           break;
+        case 'N':
+          handleToolSelect('stamp');
+          break;
         case ']':
           updateSettings({ strokeWidth: Math.min(50, settings.strokeWidth + 2) });
           break;
@@ -625,6 +630,32 @@ export const ToolbarApp: React.FC = () => {
               isActive={settings.activeTool === 'text'}
               onClick={() => handleToolSelect('text')}
             />
+
+            {/* Numbered Step Badge Stamp */}
+            <div className="relative flex items-center shrink-0">
+              <ToolButton
+                icon={<Stamp className="w-4 h-4 text-emerald-400" />}
+                label={`Numbered Step Badge (#${settings.currentStampNumber || 1})`}
+                shortcut={SHORTCUTS.STAMP}
+                isActive={settings.activeTool === 'stamp'}
+                onClick={() => handleToolSelect('stamp')}
+                badge={
+                  <span className="bg-emerald-500 text-black text-[9px] font-extrabold px-1 rounded-full shadow-sm">
+                    {settings.currentStampNumber || 1}
+                  </span>
+                }
+              />
+              {settings.activeTool === 'stamp' && (settings.currentStampNumber || 1) > 1 && (
+                <button
+                  type="button"
+                  onClick={() => updateSettings({ currentStampNumber: 1 })}
+                  className="text-[9px] bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white px-1 py-0.5 rounded ml-0.5 font-mono"
+                  title="Reset counter to 1"
+                >
+                  Reset
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="w-[1px] h-6 bg-white/10 shrink-0 mx-0.5" />
