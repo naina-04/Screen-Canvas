@@ -7,8 +7,14 @@ export class OverlayWindowManager {
   private isDrawingMode: boolean = true;
   private activeTool: ToolType = 'pen';
   private isVisible: boolean = true;
+  private isAppActive: boolean = true;
+  private onCloseCallback?: () => void;
 
   constructor(private preloadPath: string, private devUrl?: string) {}
+
+  public setOnClose(callback: () => void): void {
+    this.onCloseCallback = callback;
+  }
 
   public create(display: Display): BrowserWindow {
     const { bounds } = display;
@@ -35,7 +41,7 @@ export class OverlayWindowManager {
       },
     });
 
-    this.window.setAlwaysOnTop(true, 'screen-saver');
+    this.window.setAlwaysOnTop(true, 'floating');
     this.window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
 
     if (this.devUrl) {
@@ -46,6 +52,9 @@ export class OverlayWindowManager {
 
     this.window.on('closed', () => {
       this.window = null;
+      if (this.onCloseCallback) {
+        this.onCloseCallback();
+      }
     });
 
     this.applyDrawingMode();
@@ -78,6 +87,19 @@ export class OverlayWindowManager {
     this.applyDrawingMode();
   }
 
+  public setAppActive(active: boolean): void {
+    if (this.isAppActive === active) return;
+    this.isAppActive = active;
+    this.applyDrawingMode();
+    if (this.window && !this.window.isDestroyed()) {
+      this.window.webContents.send('app-active-changed', active);
+    }
+  }
+
+  public getIsAppActive(): boolean {
+    return this.isAppActive;
+  }
+
   public toggleDrawingMode(): boolean {
     this.isDrawingMode = !this.isDrawingMode;
     this.applyDrawingMode();
@@ -96,19 +118,36 @@ export class OverlayWindowManager {
     return this.isVisible;
   }
 
-  private applyDrawingMode(): void {
+  public destroy(): void {
     if (!this.window) return;
+    try {
+      this.window.setIgnoreMouseEvents(true);
+      this.window.hide();
+      if (!this.window.isDestroyed()) {
+        this.window.destroy();
+      }
+    } catch (err) {
+      console.error('Error destroying overlay window:', err);
+    }
+    this.window = null;
+  }
 
-    const shouldIntercept = this.isVisible && this.isDrawingMode && !isNeutralTool(this.activeTool);
+  private applyDrawingMode(): void {
+    if (!this.window || this.window.isDestroyed()) return;
+
+    const shouldIntercept =
+      this.isVisible &&
+      this.isAppActive &&
+      this.isDrawingMode &&
+      !isNeutralTool(this.activeTool);
 
     if (shouldIntercept) {
-      // Drawing Mode: overlay intercepts all mouse events
+      // Drawing Mode & App Active: overlay intercepts mouse events
       this.window.setIgnoreMouseEvents(false);
-      this.window.focus();
     } else {
-      // Neutral mode or Pass-through Mode: clicks pass straight through overlay to desktop apps
+      // Neutral mode, Inactive (switched to another app), or Pass-through Mode:
+      // clicks pass straight through overlay to desktop apps
       this.window.setIgnoreMouseEvents(true, { forward: true });
-      this.window.blur();
     }
   }
 }
