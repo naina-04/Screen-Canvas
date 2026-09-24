@@ -4,6 +4,7 @@ All notable changes to **ScreenCanvas** are documented in this file.
 
 ## [1.2.0] - 2026-09-24
 
+- **Multi-Page Presentation Slide Decks**: Full slide management with independent drawing layers, per-slide history isolation, on-screen slide toast, and hotkeys (`PageUp`/`PageDown`).
 - **Windows System Tray & Daemon**: ScreenCanvas sits quietly next to the system clock with a context menu (Show/Hide Toolbar, Toggle Drawing Mode, Clear Screen, Exit).
 - **Scrollable Toolbar & Category Navigation**: Horizontal mouse wheel scrolling, chevron controls, and segmented tabs (`All`, `Draw`, `Styles`, `Present`, `Actions`).
 - **Sequential Number Stamp Badges (`N`)**: Drop numbered badges (`①`, `②`, `③`...) with live preview cursor, auto-increment counter, and right-click reset.
