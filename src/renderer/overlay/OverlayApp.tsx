@@ -5,6 +5,7 @@ import { HistoryManager } from '../../shared/utils/HistoryManager';
 import { DrawingSettings, TextElement, Point, ToolType, BackdropType, isNeutralTool } from '../../shared/types';
 import { DEFAULT_SETTINGS } from '../../shared/constants/defaults';
 import { renderElement } from '../../shared/utils/renderEngine';
+import { saveSession, loadSession, clearSession } from '../../shared/utils/sessionPersistence';
 
 export const OverlayApp: React.FC = () => {
   const [settings, setSettings] = useState<DrawingSettings>(DEFAULT_SETTINGS);
@@ -13,10 +14,27 @@ export const OverlayApp: React.FC = () => {
   const historyManagerRef = useRef<HistoryManager>(new HistoryManager(100));
 
   const syncHistoryState = useCallback(() => {
+    const state = historyManagerRef.current.getHistoryState();
     if (window.electronAPI?.updateHistoryState) {
-      window.electronAPI.updateHistoryState(historyManagerRef.current.getHistoryState());
+      window.electronAPI.updateHistoryState(state);
     }
-  }, []);
+    saveSession(historyManagerRef.current.getElements(), settings);
+  }, [settings]);
+
+  // Restore session on initial load
+  useEffect(() => {
+    const saved = loadSession();
+    if (saved && saved.elements.length > 0) {
+      for (const el of saved.elements) {
+        historyManagerRef.current.addElement(el);
+      }
+      syncHistoryState();
+      if (saved.settings) {
+        setSettings((prev) => ({ ...prev, ...saved.settings }));
+        window.electronAPI?.updateSettings?.(saved.settings);
+      }
+    }
+  }, [syncHistoryState]);
 
   // Generate canvas snapshot Data URL for exports, screenshots, and clipboard
   const generateSnapshotDataUrl = useCallback((): string => {
@@ -93,6 +111,7 @@ export const OverlayApp: React.FC = () => {
     // Listen to clear all command
     const unsubClear = api.onClearAll(() => {
       historyManagerRef.current.clear();
+      clearSession();
       syncHistoryState();
     });
 
