@@ -32,15 +32,20 @@ This document outlines the development roadmap and feature trajectory for **Scre
 - [x] **Spotlight Focus Mode (`F`)**: Darken screen with a soft feathered radial spotlight cutout centered on cursor (adjustable with mouse wheel).
 - [x] **Laser Pointer / Disappearing Ink (`K`)**: Fading glowing trail that cleanly dissolves after 1.5 seconds without polluting history.
 - [x] **Canvas Backdrops (`B`)**: Quick 1-click toggle between Transparent, Solid Whiteboard, Chalkboard Blackboard, and Dotted Grid paper.
-- [ ] **Zoom / Magnifier Tool**: Instant magnification of screen sections for presentations.
-- [ ] **Number Stamp Tool**: Sequential click-to-number stamps (①, ②, ③, ④) for step-by-step presentation tutorials.
+- [x] **Number Stamp Tool (`N`)**: Sequential click-to-number stamps (①, ②, ③, ④) for step-by-step presentation tutorials.
+- [x] **Windows System Tray & Daemon**: Quiet background operation next to system clock with quick context menu.
+- [x] **Scrollable Smart Toolbar**: Horizontal wheel scroll, category filtering tabs, and chevron controls.
+- [x] **One-Click Pen Unselect & Desktop Mode**: Instant toggle (`Esc` / `V`) to switch between drawing and underlying applications.
+- [ ] **Zoom / Magnifier Tool**: Instant magnification lens for screen sections during live demos.
 
 ---
 
 ## 💼 Phase 3: Professional Features & Cross-Platform
 
-- [ ] **Drawing Session Persistence**: Save annotations to `.screencanvas` JSON project files to resume presentations later.
+- [x] **Drawing Session Persistence**: Auto-save and restore drawing canvas states across launches, plus manual snapshots (`Ctrl+S`).
+- [ ] **Auto-Fade Vanishing Pen**: Optional mode where regular pen annotations automatically dissolve after 5–10 seconds.
+- [ ] **Multi-Monitor Quick-Hop Hotkey**: Instant leap between displays without opening the toolbar monitor menu.
 - [ ] **macOS Support**: Port overlay click-through configuration to macOS Quartz window server.
 - [ ] **Linux (X11 / Wayland) Support**: Wayland layer-shell protocol integration.
-- [ ] **Cloud Storage & Quick Share**: Optional one-click export to clipboard or private cloud links.
+- [ ] **Cloud Storage & Quick Share**: Optional one-click export to Google Drive / OneDrive / private cloud links.
 - [ ] **Custom Global Shortcut Re-binding**: User settings UI to customize hotkey combinations.
