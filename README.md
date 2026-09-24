@@ -9,7 +9,7 @@ Built with **Electron**, **React 18**, and **TypeScript**, powered by a high-per
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)]()
 [![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)]()
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-88%20passed%20%7C%2026%20suites-success.svg)]()
+[![Tests](https://img.shields.io/badge/tests-95%20passed%20%7C%2027%20suites-success.svg)]()
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)]()
 
 [Features](#-key-features) • [Installation](#-installation--getting-started) • [Shortcuts](#-complete-keyboard-shortcuts-reference) • [Architecture](#-architecture--design) • [Toolbar Navigation](#-scrollable-toolbar--smart-navigation) • [Roadmap](#-roadmap)
@@ -25,6 +25,13 @@ Built with **Electron**, **React 18**, and **TypeScript**, powered by a high-per
 ---
 
 ## ✨ Key Features
+
+### 📑 Multi-Page Presentation Slide Decks (`PageUp` / `PageDown`)
+- **Independent Canvas Slides**: Manage multi-page presentation decks (`Slide 1 / 3`, `Slide 2 / 3`...) in the same session without erasing earlier work.
+- **Quick-Flip Navigation**: Jump forward with **`PageDown`** or `▶`, and backtrack with **`PageUp`** or `◀` to address audience questions seamlessly.
+- **Dedicated Per-Slide History**: Each slide maintains its own isolated strokes, shapes, and undo/redo stacks.
+- **Floating On-Screen Slide Toast**: An elegant glassmorphic indicator (`📄 Slide 2 of 3`) appears in the top-right corner whenever slides are switched.
+- **Instant Slide Creation**: Click `+ Slide` on the toolbar to append a fresh board in less than a millisecond.
 
 ### 🖊️ Precision Freehand Drawing & Smoothing
 - **Multiple Brush Modes**: Freehand Pen (`P`), semi-transparent Highlighter (`H`), and chisel Marker (`M`).
@@ -113,6 +120,8 @@ Built with **Electron**, **React 18**, and **TypeScript**, powered by a high-per
 ### 🌟 Presentation & Canvas Backdrops
 | Shortcut | Tool | Description |
 | :--- | :--- | :--- |
+| **`PageDown`** | **Next Slide** | Advance to next canvas slide in presentation deck |
+| **`PageUp`** | **Previous Slide** | Return to previous canvas slide in presentation deck |
 | **`F`** | **Spotlight Focus** | Darken screen with radial spotlight cutout around mouse |
 | **`K`** | **Laser Pointer** | Disappearing ink trail that dissolves after 1.5s |
 | **`B`** | **Cycle Backdrops** | Transparent → Whiteboard → Blackboard → Grid |
