@@ -42,6 +42,11 @@ export class HistoryManager {
     }
   }
 
+  public reset(elements: DrawingElement[] = []): void {
+    this.undoStack = [elements];
+    this.redoStack = [];
+  }
+
   public undo(): boolean {
     if (this.canUndo) {
       const currentState = this.undoStack.pop()!;
