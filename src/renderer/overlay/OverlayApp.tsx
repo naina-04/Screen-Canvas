@@ -6,12 +6,33 @@ import { DrawingSettings, TextElement, Point, ToolType, BackdropType, isNeutralT
 import { DEFAULT_SETTINGS } from '../../shared/constants/defaults';
 import { renderElement } from '../../shared/utils/renderEngine';
 import { saveSession, loadSession, clearSession } from '../../shared/utils/sessionPersistence';
+import {
+  createDefaultSlideDeck,
+  addSlide,
+  nextSlide,
+  prevSlide,
+  setActiveSlide,
+  deleteSlide,
+  updateActiveSlideElements,
+  getActiveSlide,
+} from '../../shared/utils/slideDeckManager';
 
 export const OverlayApp: React.FC = () => {
   const [settings, setSettings] = useState<DrawingSettings>(DEFAULT_SETTINGS);
   const [isAppActive, setIsAppActive] = useState<boolean>(true);
   const [textPromptPoint, setTextPromptPoint] = useState<Point | null>(null);
+  const [slideToast, setSlideToast] = useState<string | null>(null);
+  const slideToastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const historyManagerRef = useRef<HistoryManager>(new HistoryManager(100));
+  const slideDeckRef = useRef(createDefaultSlideDeck());
+
+  const showSlideToast = useCallback((msg: string) => {
+    setSlideToast(msg);
+    if (slideToastTimeoutRef.current) clearTimeout(slideToastTimeoutRef.current);
+    slideToastTimeoutRef.current = setTimeout(() => {
+      setSlideToast(null);
+    }, 2200);
+  }, []);
 
   const syncHistoryState = useCallback(() => {
     const state = historyManagerRef.current.getHistoryState();
@@ -80,9 +101,77 @@ export const OverlayApp: React.FC = () => {
     return canvas.toDataURL('image/png');
   }, [settings.backdropType]);
 
+  const applySlideSwitch = useCallback((deckUpdater: () => void) => {
+    // 1. Commit current strokes to current active slide
+    slideDeckRef.current = updateActiveSlideElements(
+      slideDeckRef.current,
+      historyManagerRef.current.getElements()
+    );
+
+    // 2. Perform slide deck update
+    deckUpdater();
+
+    // 3. Load newly active slide into historyManager
+    const active = getActiveSlide(slideDeckRef.current);
+    historyManagerRef.current.reset(active ? active.elements : []);
+
+    const slideNum = slideDeckRef.current.activeSlideIndex + 1;
+    const total = slideDeckRef.current.slides.length;
+    showSlideToast(`Slide ${slideNum} of ${total}`);
+
+    const updates: Partial<DrawingSettings> = {
+      activeSlideIndex: slideDeckRef.current.activeSlideIndex,
+      totalSlides: total,
+    };
+    if (active?.backdropType) {
+      updates.backdropType = active.backdropType;
+    }
+    setSettings((prev) => ({ ...prev, ...updates }));
+    window.electronAPI?.updateSettings?.(updates);
+    syncHistoryState();
+  }, [showSlideToast, syncHistoryState]);
+
+  const handleNextSlide = useCallback(() => {
+    applySlideSwitch(() => {
+      slideDeckRef.current = nextSlide(slideDeckRef.current);
+    });
+  }, [applySlideSwitch]);
+
+  const handlePrevSlide = useCallback(() => {
+    applySlideSwitch(() => {
+      slideDeckRef.current = prevSlide(slideDeckRef.current);
+    });
+  }, [applySlideSwitch]);
+
+  const handleAddSlide = useCallback(() => {
+    applySlideSwitch(() => {
+      slideDeckRef.current = addSlide(slideDeckRef.current);
+    });
+  }, [applySlideSwitch]);
+
+  const handleDeleteSlide = useCallback((index?: number) => {
+    applySlideSwitch(() => {
+      const targetIdx = typeof index === 'number' ? index : slideDeckRef.current.activeSlideIndex;
+      slideDeckRef.current = deleteSlide(slideDeckRef.current, targetIdx);
+    });
+  }, [applySlideSwitch]);
+
+  const handleGoToSlide = useCallback((index: number) => {
+    applySlideSwitch(() => {
+      slideDeckRef.current = setActiveSlide(slideDeckRef.current, index);
+    });
+  }, [applySlideSwitch]);
+
   useEffect(() => {
     const api = window.electronAPI;
     if (!api) return;
+
+    // Slide navigation listeners
+    const unsubNextSlide = api.onNextSlide?.(() => handleNextSlide());
+    const unsubPrevSlide = api.onPrevSlide?.(() => handlePrevSlide());
+    const unsubAddSlide = api.onAddSlide?.(() => handleAddSlide());
+    const unsubDeleteSlide = api.onDeleteSlide?.((idx) => handleDeleteSlide(idx));
+    const unsubGoToSlide = api.onGoToSlide?.((idx) => handleGoToSlide(idx));
 
     // Listen to settings update from toolbar
     const unsubSettings = api.onSettingsUpdated((newSettings) => {
@@ -159,6 +248,11 @@ export const OverlayApp: React.FC = () => {
     syncHistoryState();
 
     return () => {
+      unsubNextSlide?.();
+      unsubPrevSlide?.();
+      unsubAddSlide?.();
+      unsubDeleteSlide?.();
+      unsubGoToSlide?.();
       unsubSettings();
       unsubDrawingMode();
       unsubUndo();
@@ -169,7 +263,15 @@ export const OverlayApp: React.FC = () => {
       unsubCopyClipboard();
       unsubActive?.();
     };
-  }, [syncHistoryState, generateSnapshotDataUrl]);
+  }, [
+    syncHistoryState,
+    generateSnapshotDataUrl,
+    handleNextSlide,
+    handlePrevSlide,
+    handleAddSlide,
+    handleDeleteSlide,
+    handleGoToSlide,
+  ]);
 
   // Overlay keyboard shortcuts for tool switching and Escape handling
   useEffect(() => {
@@ -289,6 +391,14 @@ export const OverlayApp: React.FC = () => {
         case 'N':
           toggleOrSelect('stamp');
           break;
+        case 'PAGEUP':
+          e.preventDefault();
+          handlePrevSlide();
+          break;
+        case 'PAGEDOWN':
+          e.preventDefault();
+          handleNextSlide();
+          break;
         case ']': {
           const nextWidth = Math.min(50, settings.strokeWidth + 2);
           setSettings((prev) => ({ ...prev, strokeWidth: nextWidth }));
@@ -306,7 +416,14 @@ export const OverlayApp: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [textPromptPoint, settings.activeTool, settings.strokeWidth, syncHistoryState]);
+  }, [
+    textPromptPoint,
+    settings.activeTool,
+    settings.strokeWidth,
+    syncHistoryState,
+    handleNextSlide,
+    handlePrevSlide,
+  ]);
 
   const handleCommitText = (text: string) => {
     if (!textPromptPoint) return;
@@ -341,6 +458,13 @@ export const OverlayApp: React.FC = () => {
         onHistoryChange={syncHistoryState}
         onTextPrompt={(pt) => setTextPromptPoint(pt)}
       />
+
+      {slideToast && (
+        <div className="absolute top-6 right-8 z-50 pointer-events-none px-4 py-2 bg-slate-900/90 text-white border border-cyan-500/40 rounded-full shadow-2xl backdrop-blur-md flex items-center gap-2.5 transition-all duration-300">
+          <span className="text-cyan-400 font-bold text-base">📄</span>
+          <span className="text-sm font-semibold tracking-wide text-slate-100">{slideToast}</span>
+        </div>
+      )}
 
       {textPromptPoint && (
         <TextInputModal
