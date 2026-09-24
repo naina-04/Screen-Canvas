@@ -8,6 +8,7 @@ import { renderElement } from '../../shared/utils/renderEngine';
 
 export const OverlayApp: React.FC = () => {
   const [settings, setSettings] = useState<DrawingSettings>(DEFAULT_SETTINGS);
+  const [isAppActive, setIsAppActive] = useState<boolean>(true);
   const [textPromptPoint, setTextPromptPoint] = useState<Point | null>(null);
   const historyManagerRef = useRef<HistoryManager>(new HistoryManager(100));
 
@@ -130,6 +131,11 @@ export const OverlayApp: React.FC = () => {
       }
     });
 
+    // Listen to application active/focus state changes
+    const unsubActive = api.onAppActiveChanged?.((active) => {
+      setIsAppActive(active);
+    });
+
     // Sync initial state
     syncHistoryState();
 
@@ -142,6 +148,7 @@ export const OverlayApp: React.FC = () => {
       unsubExportPNG();
       unsubScreenshot();
       unsubCopyClipboard();
+      unsubActive?.();
     };
   }, [syncHistoryState, generateSnapshotDataUrl]);
 
@@ -188,24 +195,28 @@ export const OverlayApp: React.FC = () => {
       }
 
       const toggleOrSelect = (tool: ToolType) => {
-        const nextTool = settings.activeTool === tool ? 'select' : tool;
-        const updates: Partial<DrawingSettings> = { activeTool: nextTool };
-        if (nextTool !== 'select') updates.isDrawingMode = true;
-        setSettings((prev) => ({ ...prev, ...updates }));
-        window.electronAPI?.updateSettings(updates);
+        const isCurrentlyActive = settings.activeTool === tool && settings.isDrawingMode;
+        if (isCurrentlyActive) {
+          // Unselect to desktop mode
+          setSettings((prev) => ({ ...prev, activeTool: 'select', isDrawingMode: false }));
+          window.electronAPI?.updateSettings({ activeTool: 'select', isDrawingMode: false });
+          window.electronAPI?.setDrawingMode?.(false);
+        } else {
+          // Activate tool and enable drawing
+          const updates: Partial<DrawingSettings> = { activeTool: tool, isDrawingMode: true };
+          setSettings((prev) => ({ ...prev, ...updates }));
+          window.electronAPI?.updateSettings(updates);
+          window.electronAPI?.setDrawingMode?.(true);
+        }
       };
 
       switch (key) {
         case 'ESCAPE':
-          if (settings.activeTool !== 'select') {
-            setSettings((prev) => ({ ...prev, activeTool: 'select' }));
-            window.electronAPI?.updateSettings({ activeTool: 'select' });
-          }
-          break;
         case 'V':
         case 'S':
-          setSettings((prev) => ({ ...prev, activeTool: 'select' }));
-          window.electronAPI?.updateSettings({ activeTool: 'select' });
+          setSettings((prev) => ({ ...prev, activeTool: 'select', isDrawingMode: false }));
+          window.electronAPI?.updateSettings({ activeTool: 'select', isDrawingMode: false });
+          window.electronAPI?.setDrawingMode?.(false);
           break;
         case 'P':
           toggleOrSelect('pen');
@@ -290,6 +301,7 @@ export const OverlayApp: React.FC = () => {
     <div className="relative w-screen h-screen overflow-hidden bg-transparent select-none">
       <DualCanvas
         settings={settings}
+        isAppActive={isAppActive}
         historyManager={historyManagerRef.current}
         onHistoryChange={syncHistoryState}
         onTextPrompt={(pt) => setTextPromptPoint(pt)}
