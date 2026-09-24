@@ -211,7 +211,7 @@ export const OverlayApp: React.FC = () => {
           e.preventDefault();
         } else if (key === 'S') {
           e.preventDefault();
-          const committedStrokes = historyManagerRef.current.getCommittedStrokes();
+          const committedStrokes = historyManagerRef.current.getElements();
           saveSession(committedStrokes, settings);
           window.electronAPI?.showNotification?.(`Session snapshot saved (${committedStrokes.length} elements)`);
         } else if (key === 'Q') {
