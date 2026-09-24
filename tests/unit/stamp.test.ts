@@ -66,6 +66,10 @@ describe('StampElement & Stamp Rendering', () => {
       font: '',
       textAlign: '',
       textBaseline: '',
+      shadowColor: '',
+      shadowBlur: 0,
+      shadowOffsetX: 0,
+      shadowOffsetY: 0,
     } as unknown as CanvasRenderingContext2D;
 
     const stamp: StampElement = {
