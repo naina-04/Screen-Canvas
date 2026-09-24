@@ -80,6 +80,19 @@ export interface StampElement extends BaseElement {
 
 export type DrawingElement = PathElement | ShapeElement | ArrowElement | TextElement | StampElement;
 
+export interface Slide {
+  id: string;
+  title: string;
+  elements: DrawingElement[];
+  backdropType?: BackdropType;
+  createdAt: number;
+}
+
+export interface SlideDeck {
+  slides: Slide[];
+  activeSlideIndex: number;
+}
+
 export interface DisplayInfo {
   id: number;
   name: string;
@@ -110,6 +123,8 @@ export interface DrawingSettings {
   spotlightRadius?: number;
   currentStampNumber?: number;
   autoSaveSession?: boolean;
+  activeSlideIndex?: number;
+  totalSlides?: number;
 }
 
 export interface IPCChannels {
@@ -127,6 +142,11 @@ export interface IPCChannels {
   QUIT_APP: 'quit-app';
   MINIMIZE_TOOLBAR: 'minimize-toolbar';
   SYNC_HISTORY_STATE: 'sync-history-state';
+  NEXT_SLIDE: 'next-slide';
+  PREV_SLIDE: 'prev-slide';
+  ADD_SLIDE: 'add-slide';
+  DELETE_SLIDE: 'delete-slide';
+  GO_TO_SLIDE: 'go-to-slide';
 }
 
 export interface HistoryState {
@@ -154,6 +174,18 @@ export interface ElectronAPI {
   onClearAll: (callback: () => void) => () => void;
   updateHistoryState: (state: HistoryState) => void;
   onHistoryStateChanged: (callback: (state: HistoryState) => void) => () => void;
+
+  // Slide Deck Navigation
+  nextSlide?: () => void;
+  prevSlide?: () => void;
+  addSlide?: () => void;
+  deleteSlide?: (index?: number) => void;
+  goToSlide?: (index: number) => void;
+  onNextSlide?: (callback: () => void) => () => void;
+  onPrevSlide?: (callback: () => void) => () => void;
+  onAddSlide?: (callback: () => void) => () => void;
+  onDeleteSlide?: (callback: (index?: number) => void) => () => void;
+  onGoToSlide?: (callback: (index: number) => void) => () => void;
 
   // Overlay Visibility
   toggleOverlay: () => void;

@@ -50,6 +50,8 @@ export const DEFAULT_SETTINGS: DrawingSettings = {
   spotlightRadius: 150,
   currentStampNumber: 1,
   autoSaveSession: true,
+  activeSlideIndex: 0,
+  totalSlides: 1,
 };
 
 export const SHORTCUTS = {
@@ -73,6 +75,8 @@ export const SHORTCUTS = {
   CIRCLE: 'C',
   TEXT: 'T',
   STAMP: 'N',
+  NEXT_SLIDE: 'PageDown',
+  PREV_SLIDE: 'PageUp',
   INCREASE_SIZE: ']',
   DECREASE_SIZE: '[',
   ESCAPE: 'Escape',
