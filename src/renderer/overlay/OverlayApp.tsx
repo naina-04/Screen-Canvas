@@ -262,6 +262,9 @@ export const OverlayApp: React.FC = () => {
         case 'T':
           toggleOrSelect('text');
           break;
+        case 'N':
+          toggleOrSelect('stamp');
+          break;
         case ']': {
           const nextWidth = Math.min(50, settings.strokeWidth + 2);
           setSettings((prev) => ({ ...prev, strokeWidth: nextWidth }));
