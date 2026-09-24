@@ -23,6 +23,9 @@ export default defineConfig({
             },
           },
         },
+        onstart(options) {
+          options.startup();
+        },
       },
       {
         // Preload script entry

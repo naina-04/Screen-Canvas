@@ -29,7 +29,7 @@ export class ToolbarWindowManager {
       alwaysOnTop: true,
       skipTaskbar: false,
       focusable: true,
-      show: false,
+      show: true,
       backgroundColor: '#00000000',
       webPreferences: {
         preload: this.preloadPath,
@@ -42,15 +42,14 @@ export class ToolbarWindowManager {
     this.window.setAlwaysOnTop(true, 'screen-saver', 1);
     this.window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
 
-    this.window.once('ready-to-show', () => {
-      this.window?.show();
-    });
-
     if (this.devUrl) {
       this.window.loadURL(`${this.devUrl}/toolbar.html`);
     } else {
       this.window.loadFile(path.join(__dirname, '../../dist/toolbar.html'));
     }
+
+    this.window.show();
+    this.window.focus();
 
     this.window.on('closed', () => {
       this.window = null;
