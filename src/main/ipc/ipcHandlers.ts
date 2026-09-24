@@ -220,7 +220,16 @@ export function registerIPCHandlers(
 
   // App controls
   ipcMain.on('quit-app', () => {
+    try {
+      overlayManager.destroy();
+      toolbarManager.destroy();
+    } catch (e) {
+      console.error('Error during quit cleanup:', e);
+    }
     app.quit();
+    setTimeout(() => {
+      app.exit(0);
+    }, 50);
   });
 
   ipcMain.on('minimize-toolbar', () => {
