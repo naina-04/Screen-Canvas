@@ -30,6 +30,7 @@ const TOOL_SHORTCUTS: ShortcutItem[] = [
   { keys: ['R'], desc: 'Rectangle (Hold Shift for Square)' },
   { keys: ['C'], desc: 'Circle / Ellipse (Hold Shift for 1:1 Circle)' },
   { keys: ['T'], desc: 'Text Annotation (Click to type notes)' },
+  { keys: ['N'], desc: 'Numbered Step Badge (①, ②, ③ sequential callouts)' },
 ];
 
 const EDIT_SHORTCUTS: ShortcutItem[] = [
