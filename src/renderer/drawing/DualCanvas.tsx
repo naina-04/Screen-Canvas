@@ -23,6 +23,7 @@ import { applyShapeConstraint } from '../../shared/utils/snapEngine';
 
 interface DualCanvasProps {
   settings: DrawingSettings;
+  isAppActive?: boolean;
   historyManager: HistoryManager;
   onHistoryChange: () => void;
   onTextPrompt?: (point: Point) => void;
@@ -30,6 +31,7 @@ interface DualCanvasProps {
 
 export const DualCanvas: React.FC<DualCanvasProps> = ({
   settings,
+  isAppActive = true,
   historyManager,
   onHistoryChange,
   onTextPrompt,
@@ -278,10 +280,10 @@ export const DualCanvas: React.FC<DualCanvasProps> = ({
     return wasActive;
   }, []);
 
-  // Cancel any active interaction when activeTool or drawingMode changes
+  // Cancel any active interaction when activeTool, drawingMode, or app active state changes
   useEffect(() => {
     cancelActiveInteraction();
-  }, [settings.activeTool, settings.isDrawingMode, cancelActiveInteraction]);
+  }, [isAppActive, settings.activeTool, settings.isDrawingMode, cancelActiveInteraction]);
 
   // Handle Escape key to cancel in-flight drawing or shape gesture
   useEffect(() => {
@@ -344,7 +346,7 @@ export const DualCanvas: React.FC<DualCanvasProps> = ({
   };
 
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!settings.isDrawingMode || isNeutralTool(settings.activeTool)) return;
+    if (!isAppActive || !settings.isDrawingMode || isNeutralTool(settings.activeTool)) return;
     const scratch = scratchCanvasRef.current;
     if (!scratch) return;
 
@@ -401,7 +403,7 @@ export const DualCanvas: React.FC<DualCanvasProps> = ({
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!settings.isDrawingMode || isNeutralTool(settings.activeTool)) return;
+    if (!isAppActive || !settings.isDrawingMode || isNeutralTool(settings.activeTool)) return;
     const scratch = scratchCanvasRef.current;
     if (!scratch) return;
     const ctx = scratch.getContext('2d');
@@ -651,19 +653,19 @@ export const DualCanvas: React.FC<DualCanvasProps> = ({
     }
   };
 
-  // Auto-render spotlight when switched to spotlight tool
+  // Auto-render spotlight when switched to spotlight tool and app is active
   useEffect(() => {
-    if (settings.activeTool === 'spotlight') {
+    if (isAppActive && settings.activeTool === 'spotlight') {
       const width = containerRef.current?.clientWidth || window.innerWidth;
       const height = containerRef.current?.clientHeight || window.innerHeight;
       const pos = spotlightPosRef.current || { x: width / 2, y: height / 2 };
       spotlightPosRef.current = pos;
       renderSpotlight(pos, spotlightRadius);
     }
-  }, [settings.activeTool, spotlightRadius, renderSpotlight]);
+  }, [isAppActive, settings.activeTool, spotlightRadius, renderSpotlight]);
 
   const getCursor = () => {
-    if (!settings.isDrawingMode || isNeutralTool(settings.activeTool)) return 'default';
+    if (!isAppActive || !settings.isDrawingMode || isNeutralTool(settings.activeTool)) return 'default';
     switch (settings.activeTool) {
       case 'laser':
       case 'eraser':
@@ -692,7 +694,7 @@ export const DualCanvas: React.FC<DualCanvasProps> = ({
       onWheel={handleWheel}
       className="relative w-full h-full select-none"
       style={{
-        pointerEvents: settings.isDrawingMode && !isNeutralTool(settings.activeTool) ? 'auto' : 'none',
+        pointerEvents: isAppActive && settings.isDrawingMode && !isNeutralTool(settings.activeTool) ? 'auto' : 'none',
         cursor: getCursor(),
       }}
     >
