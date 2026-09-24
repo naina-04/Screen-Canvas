@@ -30,6 +30,7 @@ import {
   Copy,
   HelpCircle,
   Stamp,
+  Plus,
 } from 'lucide-react';
 import { ToolButton } from './components/ToolButton';
 import { ColorPickerPopover } from './components/ColorPickerPopover';
@@ -414,33 +415,72 @@ export const ToolbarApp: React.FC = () => {
 
   return (
     <div className="relative flex flex-col items-center select-none pt-1 animate-in fade-in slide-in-from-top-2 duration-200 w-full max-w-[900px] px-2">
-      {/* Category Segmented Navigation Controls */}
+      {/* Category Navigation Bar & Slide Deck Controller */}
       <div
-        className="flex items-center gap-1 mb-1 px-2.5 py-0.5 rounded-full bg-[#121318]/80 border border-white/10 backdrop-blur-md shadow-lg"
+        className="flex items-center justify-between gap-2 mb-1 px-2.5 py-0.5 rounded-full bg-[#121318]/90 border border-white/10 backdrop-blur-md shadow-lg w-full"
         style={{ WebkitAppRegion: 'no-drag' } as any}
       >
-        {(
-          [
-            { id: 'all', label: 'All' },
-            { id: 'draw', label: 'Draw' },
-            { id: 'style', label: 'Styles' },
-            { id: 'present', label: 'Present' },
-            { id: 'actions', label: 'Actions' },
-          ] as { id: ToolCategory; label: string }[]
-        ).map((tab) => (
+        <div className="flex items-center gap-1">
+          {(
+            [
+              { id: 'all', label: 'All' },
+              { id: 'draw', label: 'Draw' },
+              { id: 'style', label: 'Styles' },
+              { id: 'present', label: 'Present' },
+              { id: 'actions', label: 'Actions' },
+            ] as { id: ToolCategory; label: string }[]
+          ).map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => navigateToCategory(tab.id)}
+              className={`px-2 py-0.5 rounded-full text-[10px] font-semibold transition-all duration-150 ${
+                activeCategory === tab.id
+                  ? 'bg-blue-600 text-white shadow-glow'
+                  : 'text-gray-400 hover:text-white hover:bg-white/10'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Slide Deck Controller */}
+        <div className="flex items-center gap-1 pl-2 border-l border-white/15">
           <button
-            key={tab.id}
             type="button"
-            onClick={() => navigateToCategory(tab.id)}
-            className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold transition-all duration-150 ${
-              activeCategory === tab.id
-                ? 'bg-blue-600 text-white shadow-glow'
-                : 'text-gray-400 hover:text-white hover:bg-white/10'
-            }`}
+            onClick={() => window.electronAPI?.prevSlide?.()}
+            disabled={(settings.activeSlideIndex ?? 0) <= 0}
+            className="p-0.5 text-gray-400 hover:text-white disabled:opacity-30 disabled:hover:text-gray-400 rounded hover:bg-white/10 transition-colors"
+            title="Previous Slide (PageUp)"
           >
-            {tab.label}
+            <ChevronLeft className="w-3 h-3" />
           </button>
-        ))}
+
+          <span className="text-[10px] font-semibold text-gray-200 tracking-wide select-none px-0.5 whitespace-nowrap">
+            Slide {(settings.activeSlideIndex ?? 0) + 1} / {settings.totalSlides ?? 1}
+          </span>
+
+          <button
+            type="button"
+            onClick={() => window.electronAPI?.nextSlide?.()}
+            disabled={(settings.activeSlideIndex ?? 0) >= (settings.totalSlides ?? 1) - 1}
+            className="p-0.5 text-gray-400 hover:text-white disabled:opacity-30 disabled:hover:text-gray-400 rounded hover:bg-white/10 transition-colors"
+            title="Next Slide (PageDown)"
+          >
+            <ChevronRight className="w-3 h-3" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => window.electronAPI?.addSlide?.()}
+            className="px-1.5 py-0.5 text-[9px] font-bold bg-cyan-600/80 hover:bg-cyan-500 text-white rounded-md shadow-sm transition-all flex items-center gap-0.5 ml-1"
+            title="Add New Blank Slide"
+          >
+            <Plus className="w-2.5 h-2.5" />
+            <span>Slide</span>
+          </button>
+        </div>
       </div>
 
       {/* Floating Pill Toolbar */}
