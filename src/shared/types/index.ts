@@ -178,6 +178,7 @@ export interface ElectronAPI {
   quitApp: () => void;
   minimizeToolbar: () => void;
   setToolbarExpanded?: (expanded: boolean) => void;
+  onAppActiveChanged?: (callback: (isActive: boolean) => void) => () => void;
 }
 
 declare global {
