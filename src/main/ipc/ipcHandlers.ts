@@ -210,6 +210,42 @@ export function registerIPCHandlers(
     }
   });
 
+  // Slide Deck navigation relays
+  ipcMain.on('next-slide', () => {
+    const overlayWin = overlayManager.getWindow();
+    if (overlayWin && !overlayWin.isDestroyed()) {
+      overlayWin.webContents.send('next-slide');
+    }
+  });
+
+  ipcMain.on('prev-slide', () => {
+    const overlayWin = overlayManager.getWindow();
+    if (overlayWin && !overlayWin.isDestroyed()) {
+      overlayWin.webContents.send('prev-slide');
+    }
+  });
+
+  ipcMain.on('add-slide', () => {
+    const overlayWin = overlayManager.getWindow();
+    if (overlayWin && !overlayWin.isDestroyed()) {
+      overlayWin.webContents.send('add-slide');
+    }
+  });
+
+  ipcMain.on('delete-slide', (_event, index?: number) => {
+    const overlayWin = overlayManager.getWindow();
+    if (overlayWin && !overlayWin.isDestroyed()) {
+      overlayWin.webContents.send('delete-slide', index);
+    }
+  });
+
+  ipcMain.on('go-to-slide', (_event, index: number) => {
+    const overlayWin = overlayManager.getWindow();
+    if (overlayWin && !overlayWin.isDestroyed()) {
+      overlayWin.webContents.send('go-to-slide', index);
+    }
+  });
+
   // Relay notifications to toolbar
   ipcMain.on('show-notification', (_event, message: string) => {
     const toolbarWin = toolbarManager.getWindow();

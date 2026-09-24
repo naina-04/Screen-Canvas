@@ -56,6 +56,38 @@ const api: ElectronAPI = {
     return () => ipcRenderer.removeListener('sync-history-state', handler);
   },
 
+  // Slide Deck Navigation
+  nextSlide: () => ipcRenderer.send('next-slide'),
+  prevSlide: () => ipcRenderer.send('prev-slide'),
+  addSlide: () => ipcRenderer.send('add-slide'),
+  deleteSlide: (index?: number) => ipcRenderer.send('delete-slide', index),
+  goToSlide: (index: number) => ipcRenderer.send('go-to-slide', index),
+  onNextSlide: (callback: () => void) => {
+    const handler = () => callback();
+    ipcRenderer.on('next-slide', handler);
+    return () => ipcRenderer.removeListener('next-slide', handler);
+  },
+  onPrevSlide: (callback: () => void) => {
+    const handler = () => callback();
+    ipcRenderer.on('prev-slide', handler);
+    return () => ipcRenderer.removeListener('prev-slide', handler);
+  },
+  onAddSlide: (callback: () => void) => {
+    const handler = () => callback();
+    ipcRenderer.on('add-slide', handler);
+    return () => ipcRenderer.removeListener('add-slide', handler);
+  },
+  onDeleteSlide: (callback: (index?: number) => void) => {
+    const handler = (_event: any, index?: number) => callback(index);
+    ipcRenderer.on('delete-slide', handler);
+    return () => ipcRenderer.removeListener('delete-slide', handler);
+  },
+  onGoToSlide: (callback: (index: number) => void) => {
+    const handler = (_event: any, index: number) => callback(index);
+    ipcRenderer.on('go-to-slide', handler);
+    return () => ipcRenderer.removeListener('go-to-slide', handler);
+  },
+
   // Overlay Visibility
   toggleOverlay: () => {
     ipcRenderer.send('toggle-overlay');
