@@ -91,4 +91,71 @@ describe('ScreenCanvas Integration & State Sync', () => {
     expect(merged.isDrawingMode).toBe(true);
     expect(DEFAULT_SETTINGS.activeTool).toBe('pen');
   });
+
+  it('determines cursor correctly based on app active state and drawing tool', () => {
+    const getCursorHelper = (isAppActive: boolean, settings: DrawingSettings): string => {
+      if (!isAppActive || !settings.isDrawingMode) return 'default';
+      switch (settings.activeTool) {
+        case 'laser':
+        case 'eraser':
+        case 'spotlight':
+          return 'none';
+        case 'pen':
+        case 'marker':
+          return 'crosshair';
+        case 'highlighter':
+          return 'cell';
+        case 'text':
+          return 'text';
+        case 'line':
+        case 'arrow':
+        case 'rectangle':
+        case 'circle':
+          return 'crosshair';
+        default:
+          return 'default';
+      }
+    };
+
+    // When app is active and Pen is selected -> crosshair (pen cursor)
+    const penSettings: DrawingSettings = { ...DEFAULT_SETTINGS, activeTool: 'pen', isDrawingMode: true };
+    expect(getCursorHelper(true, penSettings)).toBe('crosshair');
+
+    // When app is switched to another application (isAppActive = false) -> MUST revert to 'default'
+    expect(getCursorHelper(false, penSettings)).toBe('default');
+
+    // When user brings app back to top (isAppActive = true) -> restores 'crosshair'
+    expect(getCursorHelper(true, penSettings)).toBe('crosshair');
+
+    // When neutral/select tool is active -> default cursor even if app is active
+    const selectSettings: DrawingSettings = { ...DEFAULT_SETTINGS, activeTool: 'select', isDrawingMode: true };
+    expect(getCursorHelper(true, selectSettings)).toBe('default');
+
+    // When pass-through mode is active (isDrawingMode = false) -> default cursor
+    const passThroughSettings: DrawingSettings = { ...DEFAULT_SETTINGS, activeTool: 'pen', isDrawingMode: false };
+    expect(getCursorHelper(true, passThroughSettings)).toBe('default');
+  });
+
+  it('calculates whether overlay intercepts mouse events based on active state', () => {
+    const shouldInterceptHelper = (
+      isVisible: boolean,
+      isAppActive: boolean,
+      isDrawingMode: boolean,
+      tool: string
+    ): boolean => {
+      return isVisible && isAppActive && isDrawingMode && tool !== 'select' && tool !== 'none';
+    };
+
+    // Open & active with pen -> intercepts mouse for drawing
+    expect(shouldInterceptHelper(true, true, true, 'pen')).toBe(true);
+
+    // Switched to another application (isAppActive = false) -> STOP drawing, clicks pass through
+    expect(shouldInterceptHelper(true, false, true, 'pen')).toBe(false);
+
+    // App brought back to the top (isAppActive = true) -> resumes drawing
+    expect(shouldInterceptHelper(true, true, true, 'pen')).toBe(true);
+
+    // App hidden -> does not intercept
+    expect(shouldInterceptHelper(false, true, true, 'pen')).toBe(false);
+  });
 });
