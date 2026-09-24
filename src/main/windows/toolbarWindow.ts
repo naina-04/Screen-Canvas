@@ -3,8 +3,13 @@ import path from 'path';
 
 export class ToolbarWindowManager {
   private window: BrowserWindow | null = null;
+  private onCloseCallback?: () => void;
 
   constructor(private preloadPath: string, private devUrl?: string) {}
+
+  public setOnClose(callback: () => void): void {
+    this.onCloseCallback = callback;
+  }
 
   public create(display: Display): BrowserWindow {
     const defaultWidth = 880;
@@ -32,7 +37,7 @@ export class ToolbarWindowManager {
       },
     });
 
-    this.window.setAlwaysOnTop(true, 'screen-saver');
+    this.window.setAlwaysOnTop(true, 'screen-saver', 1);
     this.window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
 
     if (this.devUrl) {
@@ -43,6 +48,9 @@ export class ToolbarWindowManager {
 
     this.window.on('closed', () => {
       this.window = null;
+      if (this.onCloseCallback) {
+        this.onCloseCallback();
+      }
     });
 
     return this.window;
@@ -50,6 +58,19 @@ export class ToolbarWindowManager {
 
   public getWindow(): BrowserWindow | null {
     return this.window;
+  }
+
+  public destroy(): void {
+    if (!this.window) return;
+    try {
+      this.window.hide();
+      if (!this.window.isDestroyed()) {
+        this.window.destroy();
+      }
+    } catch (err) {
+      console.error('Error destroying toolbar window:', err);
+    }
+    this.window = null;
   }
 
   public setExpanded(expanded: boolean): void {
