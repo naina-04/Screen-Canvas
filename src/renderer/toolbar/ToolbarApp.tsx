@@ -75,16 +75,28 @@ export const ToolbarApp: React.FC = () => {
     });
   };
 
+  // Unselect drawing tool and switch directly to desktop pass-through mode
+  const unselectDrawingTool = () => {
+    const updates: Partial<DrawingSettings> = {
+      activeTool: 'select',
+      isDrawingMode: false,
+    };
+    updateSettings(updates);
+    if (window.electronAPI?.setDrawingMode) {
+      window.electronAPI.setDrawingMode(false);
+    }
+  };
+
   // Tool Selection State Machine
   const handleToolSelect = (tool: ToolType) => {
     if (isNeutralTool(tool)) {
-      updateSettings({ activeTool: 'select' });
+      unselectDrawingTool();
       return;
     }
 
-    if (settings.activeTool === tool) {
-      // Clicking an already selected drawing tool toggles to neutral select mode
-      updateSettings({ activeTool: 'select' });
+    if (settings.activeTool === tool && settings.isDrawingMode) {
+      // Clicking an already selected drawing tool unselects it to desktop mode
+      unselectDrawingTool();
     } else {
       // Switching to a drawing tool: activate it and ensure drawing mode is enabled
       lastActiveDrawingToolRef.current = tool;
@@ -93,13 +105,13 @@ export const ToolbarApp: React.FC = () => {
         isDrawingMode: true,
       };
       updateSettings(updates);
-      if (!settings.isDrawingMode && window.electronAPI?.setDrawingMode) {
+      if (window.electronAPI?.setDrawingMode) {
         window.electronAPI.setDrawingMode(true);
       }
     }
   };
 
-  // Toggle drawing vs pass-through mode
+  // Toggle drawing vs desktop pass-through mode
   const toggleDrawingMode = () => {
     const next = !settings.isDrawingMode;
     if (window.electronAPI?.setDrawingMode) {
@@ -109,7 +121,7 @@ export const ToolbarApp: React.FC = () => {
       const restored = lastActiveDrawingToolRef.current || 'pen';
       updateSettings({ isDrawingMode: next, activeTool: restored });
     } else {
-      setSettings((prev) => ({ ...prev, isDrawingMode: next }));
+      updateSettings({ isDrawingMode: next });
     }
   };
 
@@ -279,62 +291,59 @@ export const ToolbarApp: React.FC = () => {
           <GripVertical className="w-4 h-4" />
         </div>
 
-        {/* Mode Toggle: Draw vs Pass-Through */}
+        {/* Mode Toggle: Draw vs Desktop Pass-Through */}
         <button
           type="button"
           onClick={toggleDrawingMode}
-          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all shadow-md ${
-            settings.isDrawingMode
-              ? isNeutralTool(settings.activeTool)
-                ? 'bg-slate-700/90 text-blue-200 border border-blue-400/40 hover:bg-slate-600'
-                : 'bg-blue-600 text-white shadow-glow hover:bg-blue-500'
-              : 'bg-emerald-600/80 text-emerald-100 hover:bg-emerald-500 ring-1 ring-emerald-400/50'
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all shadow-md ${
+            settings.isDrawingMode && !isNeutralTool(settings.activeTool)
+              ? 'bg-blue-600 text-white shadow-glow hover:bg-blue-500'
+              : 'bg-emerald-600/90 text-emerald-100 hover:bg-emerald-500 ring-1 ring-emerald-400/50'
           }`}
           title={
-            settings.isDrawingMode
-              ? isNeutralTool(settings.activeTool)
-                ? 'Neutral Mode: click desktop apps or select a drawing tool (Ctrl+Shift+D)'
-                : 'Drawing Mode active (Ctrl+Shift+D to toggle)'
-              : 'Pass-Through active: clicks reach desktop apps (Ctrl+Shift+D)'
+            settings.isDrawingMode && !isNeutralTool(settings.activeTool)
+              ? 'Drawing Mode Active: Click to Unselect Pen & switch to Desktop (Ctrl+Shift+D)'
+              : 'Desktop Mode Active: Clicks reach other applications (Ctrl+Shift+D to Draw)'
           }
         >
-          {settings.isDrawingMode ? (
-            isNeutralTool(settings.activeTool) ? (
-              <>
-                <MousePointer2 className="w-3.5 h-3.5 text-blue-300" />
-                <span>Neutral</span>
-              </>
-            ) : (
-              <>
-                <Pen className="w-3.5 h-3.5" />
-                <span>Drawing</span>
-              </>
-            )
+          {settings.isDrawingMode && !isNeutralTool(settings.activeTool) ? (
+            <>
+              <Pen className="w-3.5 h-3.5" />
+              <span>Drawing</span>
+            </>
           ) : (
             <>
               <MousePointer className="w-3.5 h-3.5" />
-              <span>Pass-thru</span>
+              <span>Desktop</span>
             </>
           )}
         </button>
 
         <div className="w-[1px] h-6 bg-white/10 mx-0.5" />
 
-        {/* Dedicated Select / Neutral Tool */}
+        {/* Dedicated Desktop Cursor / Unselect Pen Tool */}
         <ToolButton
           icon={<MousePointer2 className="w-4 h-4" />}
-          label="Select / Interact"
-          shortcut={SHORTCUTS.SELECT}
-          isActive={isNeutralTool(settings.activeTool)}
-          onClick={() => handleToolSelect('select')}
+          label={
+            settings.isDrawingMode && !isNeutralTool(settings.activeTool)
+              ? 'Unselect Pen (Click other apps)'
+              : 'Desktop Mode (Click other apps)'
+          }
+          shortcut="Esc / V"
+          isActive={!settings.isDrawingMode || isNeutralTool(settings.activeTool)}
+          onClick={unselectDrawingTool}
         />
 
         {/* Primary Tools */}
         <ToolButton
           icon={<Pen className="w-4 h-4" />}
-          label="Pen"
+          label={
+            settings.activeTool === 'pen' && settings.isDrawingMode
+              ? 'Pen (Active — Click to Unselect)'
+              : 'Pen'
+          }
           shortcut={SHORTCUTS.PEN}
-          isActive={settings.activeTool === 'pen'}
+          isActive={settings.activeTool === 'pen' && settings.isDrawingMode}
           onClick={() => handleToolSelect('pen')}
         />
 
