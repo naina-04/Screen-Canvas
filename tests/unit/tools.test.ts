@@ -11,16 +11,20 @@ describe('Tool Selection State Machine & Neutral Mode', () => {
   let settings: DrawingSettings;
   let lastActiveDrawingTool: ToolType;
 
+  const unselectDrawingTool = () => {
+    settings = { ...settings, activeTool: 'select', isDrawingMode: false };
+  };
+
   // Emulates the tool selection state machine implemented in ToolbarApp
   const selectTool = (tool: ToolType) => {
     if (isNeutralTool(tool)) {
-      settings = { ...settings, activeTool: 'select' };
+      unselectDrawingTool();
       return;
     }
 
-    if (settings.activeTool === tool) {
+    if (settings.activeTool === tool && settings.isDrawingMode) {
       // Toggle active tool to neutral select mode
-      settings = { ...settings, activeTool: 'select' };
+      unselectDrawingTool();
     } else {
       // Switch to new tool and ensure drawing mode is active
       lastActiveDrawingTool = tool;
@@ -131,19 +135,21 @@ describe('Tool Selection State Machine & Neutral Mode', () => {
   it('toggles drawing mode off and on, restoring last active drawing tool from neutral', () => {
     selectTool('pen');
     expect(settings.activeTool).toBe('pen');
+    expect(settings.isDrawingMode).toBe(true);
 
-    // Deselect to neutral
+    // Unselect pen to desktop/neutral mode
     selectTool('pen');
     expect(settings.activeTool).toBe('select');
-
-    // Toggle drawing mode off
-    toggleDrawingMode();
     expect(settings.isDrawingMode).toBe(false);
 
     // Toggle drawing mode on: restores last active drawing tool ('pen')
     toggleDrawingMode();
     expect(settings.isDrawingMode).toBe(true);
     expect(settings.activeTool).toBe('pen');
+
+    // Toggle drawing mode off
+    toggleDrawingMode();
+    expect(settings.isDrawingMode).toBe(false);
   });
 
   it('activates drawing mode when a drawing tool is selected while pass-through was active', () => {
