@@ -121,3 +121,27 @@ The `DisplayManager` uses Electron's `screen` API:
 - **Node Integration Disabled**: `nodeIntegration: false` prevents any renderer script from accessing Node standard libraries or the file system directly.
 - **Preload Interface**: A secure, minimal API is exposed to `window.electronAPI` using `contextBridge.exposeInMainWorld`.
 - **File System Protection**: File saving for exported PNGs and screenshots is handled strictly by the Electron main process via native system dialogs (`dialog.showSaveDialog`), validating paths and preventing arbitrary file overwrites.
+
+---
+
+## 6. Windows System Tray Daemon & Lifecycle
+
+ScreenCanvas integrates with the Windows Notification Area (System Tray) via `TrayManager`:
+- **Native Bitmap Generation**: Generates 16×16 RGBA bitmap buffers dynamically via `generateTrayIcon()` without static file dependencies.
+- **Dynamic Context Menu**: Right-click menu allows one-click toolbar visibility toggling, drawing mode switching (`Ctrl+Shift+D`), clearing the screen (`Ctrl+Shift+X`), and quitting (`Ctrl+Q`).
+- **Synchronized Teardown**: Closing or exiting destroys all windows, cleans up tray handles, unregisters global shortcuts, and terminates cleanly without lingering processes or ghost overlays.
+
+---
+
+## 7. Session Persistence & Sequential Step Badges
+
+### Session Auto-Recovery (`sessionPersistence.ts`)
+- Automatically caches vector elements and active canvas settings to versioned storage.
+- On launch, previous annotations and whiteboard sketches are instantly restored.
+- Clearing the canvas cleanly clears persisted storage.
+
+### Sequential Step Stamps (`StampElement`)
+- Specialized callout stamps (①, ②, ③...) with automatic integer incrementing.
+- Live preview indicator rendered on the scratch layer under the cursor before click placement.
+- One-click sequence reset in toolbar controls.
+
