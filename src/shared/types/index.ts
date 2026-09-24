@@ -108,6 +108,8 @@ export interface DrawingSettings {
   selectedDisplayId?: number;
   backdropType?: BackdropType;
   spotlightRadius?: number;
+  currentStampNumber?: number;
+  autoSaveSession?: boolean;
 }
 
 export interface IPCChannels {
