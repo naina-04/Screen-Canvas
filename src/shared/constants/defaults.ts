@@ -48,6 +48,8 @@ export const DEFAULT_SETTINGS: DrawingSettings = {
   isOverlayVisible: true,
   backdropType: 'transparent',
   spotlightRadius: 150,
+  currentStampNumber: 1,
+  autoSaveSession: true,
 };
 
 export const SHORTCUTS = {
@@ -70,6 +72,7 @@ export const SHORTCUTS = {
   RECTANGLE: 'R',
   CIRCLE: 'C',
   TEXT: 'T',
+  STAMP: 'N',
   INCREASE_SIZE: ']',
   DECREASE_SIZE: '[',
   ESCAPE: 'Escape',
