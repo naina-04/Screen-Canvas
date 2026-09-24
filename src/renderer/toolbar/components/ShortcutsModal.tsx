@@ -17,8 +17,8 @@ const GLOBAL_SHORTCUTS: ShortcutItem[] = [
 ];
 
 const TOOL_SHORTCUTS: ShortcutItem[] = [
-  { keys: ['V'], desc: 'Select / Interact Tool (Neutral Desktop Mode)' },
-  { keys: ['P'], desc: 'Pen (Freehand Drawing) / Toggle to Neutral' },
+  { keys: ['Esc', 'or', 'V'], desc: 'Unselect Pen (Desktop Mode — Click other apps)' },
+  { keys: ['P'], desc: 'Pen (Freehand Drawing) / Click again to Unselect' },
   { keys: ['K'], desc: 'Laser Pointer (Disappearing Ink Trail)' },
   { keys: ['F'], desc: 'Spotlight Focus Mode (Dark Backdrop Cutout)' },
   { keys: ['B'], desc: 'Cycle Backdrop (Transparent, Whiteboard, Blackboard, Grid)' },
@@ -36,16 +36,35 @@ const EDIT_SHORTCUTS: ShortcutItem[] = [
   { keys: ['Ctrl', 'Z'], desc: 'Undo stroke / shape' },
   { keys: ['Ctrl', 'Y'], desc: 'Redo previously undone stroke' },
   { keys: ['Ctrl', 'C'], desc: 'Copy drawing snapshot to clipboard' },
+  { keys: ['Ctrl', 'Q'], desc: 'Exit ScreenCanvas Application' },
   { keys: ['['], desc: 'Decrease brush stroke width' },
   { keys: [']'], desc: 'Increase brush stroke width' },
   { keys: ['Scroll'], desc: 'Resize Spotlight circle radius' },
-  { keys: ['Escape'], desc: 'Cancel in-flight preview / Return to Select mode' },
+  { keys: ['Escape'], desc: 'Unselect Pen / Return to Desktop mode' },
 ];
 
 export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ onClose }) => {
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, [onClose]);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-      <div className="relative w-full max-w-xl bg-[#1e1e24]/95 border border-white/15 rounded-2xl shadow-2xl p-6 text-gray-100 flex flex-col max-h-[85vh]">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-xl bg-[#1e1e24]/95 border border-white/15 rounded-2xl shadow-2xl p-6 text-gray-100 flex flex-col max-h-[85vh]"
+      >
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-white/10">
           <div className="flex items-center gap-2.5">

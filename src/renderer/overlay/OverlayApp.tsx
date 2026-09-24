@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { DualCanvas } from '../drawing/DualCanvas';
 import { TextInputModal } from '../drawing/TextInputModal';
 import { HistoryManager } from '../../shared/utils/HistoryManager';
-import { DrawingSettings, TextElement, Point, ToolType, BackdropType } from '../../shared/types';
+import { DrawingSettings, TextElement, Point, ToolType, BackdropType, isNeutralTool } from '../../shared/types';
 import { DEFAULT_SETTINGS } from '../../shared/constants/defaults';
 import { renderElement } from '../../shared/utils/renderEngine';
 
@@ -190,6 +190,9 @@ export const OverlayApp: React.FC = () => {
             });
           }
           e.preventDefault();
+        } else if (key === 'Q') {
+          e.preventDefault();
+          window.electronAPI?.quitApp();
         }
         return;
       }
@@ -297,8 +300,13 @@ export const OverlayApp: React.FC = () => {
     syncHistoryState();
   };
 
+  const isInteractive = isAppActive && settings.isDrawingMode && !isNeutralTool(settings.activeTool);
+
   return (
-    <div className="relative w-screen h-screen overflow-hidden bg-transparent select-none">
+    <div
+      className="relative w-screen h-screen overflow-hidden bg-transparent select-none"
+      style={{ pointerEvents: isInteractive ? 'auto' : 'none' }}
+    >
       <DualCanvas
         settings={settings}
         isAppActive={isAppActive}

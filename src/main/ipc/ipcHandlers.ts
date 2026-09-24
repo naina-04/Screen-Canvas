@@ -237,7 +237,7 @@ export function registerIPCHandlers(
     if (toolbarWin) toolbarWin.minimize();
   });
 
-  ipcMain.on('set-toolbar-expanded', (_event, expanded: boolean) => {
-    toolbarManager.setExpanded(expanded);
+  ipcMain.on('set-toolbar-expanded', (_event, expanded: boolean, isModal?: boolean) => {
+    toolbarManager.setExpanded(expanded, isModal);
   });
 }

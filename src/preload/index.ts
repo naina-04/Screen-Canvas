@@ -107,8 +107,8 @@ const api: ElectronAPI = {
   minimizeToolbar: () => {
     ipcRenderer.send('minimize-toolbar');
   },
-  setToolbarExpanded: (expanded: boolean) => {
-    ipcRenderer.send('set-toolbar-expanded', expanded);
+  setToolbarExpanded: (expanded: boolean, isModal?: boolean) => {
+    ipcRenderer.send('set-toolbar-expanded', expanded, isModal);
   },
   onAppActiveChanged: (callback: (isActive: boolean) => void) => {
     const handler = (_event: any, isActive: boolean) => callback(isActive);

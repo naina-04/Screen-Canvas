@@ -177,7 +177,7 @@ export interface ElectronAPI {
   // Window Controls
   quitApp: () => void;
   minimizeToolbar: () => void;
-  setToolbarExpanded?: (expanded: boolean) => void;
+  setToolbarExpanded?: (expanded: boolean, isModal?: boolean) => void;
   onAppActiveChanged?: (callback: (isActive: boolean) => void) => () => void;
 }
 

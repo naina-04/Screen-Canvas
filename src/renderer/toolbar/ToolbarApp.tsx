@@ -56,10 +56,14 @@ export const ToolbarApp: React.FC = () => {
   const [exportNotice, setExportNotice] = useState<string | null>(null);
   const lastActiveDrawingToolRef = useRef<ToolType>('pen');
 
-  // Expand toolbar window height when popovers open
+  // Expand toolbar window height when popovers or modal open
   useEffect(() => {
-    window.electronAPI?.setToolbarExpanded?.(Boolean(activePopover));
-  }, [activePopover]);
+    if (showShortcuts) {
+      window.electronAPI?.setToolbarExpanded?.(true, true);
+    } else {
+      window.electronAPI?.setToolbarExpanded?.(Boolean(activePopover), false);
+    }
+  }, [activePopover, showShortcuts]);
 
   // Sync settings with electron main and overlay
   const updateSettings = (newSettings: Partial<DrawingSettings>) => {
@@ -275,8 +279,20 @@ export const ToolbarApp: React.FC = () => {
     settings.activeTool === 'rectangle' ||
     settings.activeTool === 'circle';
 
+  // Global Ctrl+Q shortcut in Toolbar window
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'q') {
+        e.preventDefault();
+        window.electronAPI?.quitApp();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return (
-    <div className="relative flex flex-col items-center select-none pt-2">
+    <div className="relative flex flex-col items-center select-none pt-2 animate-in fade-in slide-in-from-top-2 duration-200">
       {/* Floating Pill Toolbar */}
       <div
         className="glass-panel rounded-2xl px-3 py-2 flex items-center gap-1.5 shadow-2xl relative"
@@ -685,12 +701,24 @@ export const ToolbarApp: React.FC = () => {
           onClick={() => setShowShortcuts(true)}
         />
 
+        <div className="w-[1px] h-6 bg-white/10 mx-0.5" />
+
+        {/* Minimize Toolbar */}
+        <button
+          type="button"
+          onClick={() => window.electronAPI?.minimizeToolbar?.()}
+          className="text-gray-400 hover:text-white hover:bg-white/10 p-1.5 rounded-xl transition-colors"
+          title="Minimize Toolbar"
+        >
+          <Minus className="w-4 h-4" />
+        </button>
+
         {/* Close App */}
         <button
           type="button"
           onClick={() => window.electronAPI?.quitApp()}
-          className="text-gray-400 hover:text-red-400 hover:bg-white/10 p-1.5 rounded-xl transition-colors ml-1"
-          title="Exit ScreenCanvas"
+          className="text-gray-400 hover:text-red-400 hover:bg-white/10 p-1.5 rounded-xl transition-colors"
+          title="Exit ScreenCanvas (Ctrl+Q)"
         >
           <X className="w-4 h-4" />
         </button>

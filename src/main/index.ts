@@ -109,8 +109,16 @@ async function initializeApp() {
     toolbarWin.on('blur', handleBlur);
     toolbarWin.on('minimize', () => {
       overlayManager.setAppActive(false);
+      const oWin = overlayManager.getWindow();
+      if (oWin && !oWin.isDestroyed()) {
+        oWin.hide();
+      }
     });
     toolbarWin.on('restore', () => {
+      const oWin = overlayManager.getWindow();
+      if (oWin && !oWin.isDestroyed()) {
+        oWin.show();
+      }
       handleFocus();
     });
   }

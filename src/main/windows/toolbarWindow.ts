@@ -29,6 +29,8 @@ export class ToolbarWindowManager {
       alwaysOnTop: true,
       skipTaskbar: false,
       focusable: true,
+      show: false,
+      backgroundColor: '#00000000',
       webPreferences: {
         preload: this.preloadPath,
         contextIsolation: true,
@@ -39,6 +41,10 @@ export class ToolbarWindowManager {
 
     this.window.setAlwaysOnTop(true, 'screen-saver', 1);
     this.window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+
+    this.window.once('ready-to-show', () => {
+      this.window?.show();
+    });
 
     if (this.devUrl) {
       this.window.loadURL(`${this.devUrl}/toolbar.html`);
@@ -73,10 +79,10 @@ export class ToolbarWindowManager {
     this.window = null;
   }
 
-  public setExpanded(expanded: boolean): void {
+  public setExpanded(expanded: boolean, isModal: boolean = false): void {
     if (!this.window) return;
     const currentBounds = this.window.getBounds();
-    const targetHeight = expanded ? 240 : 90;
+    const targetHeight = isModal ? 580 : expanded ? 240 : 90;
     this.window.setBounds({
       ...currentBounds,
       height: targetHeight,

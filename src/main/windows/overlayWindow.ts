@@ -33,6 +33,8 @@ export class OverlayWindowManager {
       skipTaskbar: true,
       enableLargerThanScreen: true,
       focusable: true,
+      show: false,
+      backgroundColor: '#00000000',
       webPreferences: {
         preload: this.preloadPath,
         contextIsolation: true,
@@ -43,6 +45,11 @@ export class OverlayWindowManager {
 
     this.window.setAlwaysOnTop(true, 'floating');
     this.window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+
+    this.window.once('ready-to-show', () => {
+      this.window?.show();
+      this.applyDrawingMode();
+    });
 
     if (this.devUrl) {
       this.window.loadURL(`${this.devUrl}/overlay.html`);
