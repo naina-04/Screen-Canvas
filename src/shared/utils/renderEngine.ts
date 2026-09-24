@@ -186,20 +186,31 @@ export function renderStamp(ctx: CanvasRenderingContext2D, element: StampElement
   ctx.save();
   ctx.globalAlpha = opacity;
 
+  // Soft drop shadow
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
+  ctx.shadowBlur = 6;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 2;
+
   // Outer circular badge
   ctx.beginPath();
   ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
   ctx.fillStyle = color;
   ctx.fill();
 
+  // Reset shadow for crisp border and text
+  ctx.shadowColor = 'transparent';
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetY = 0;
+
   // White rim border
   ctx.lineWidth = 2;
   ctx.strokeStyle = '#ffffff';
   ctx.stroke();
 
-  // Number text inside
+  // Number text inside badge
   ctx.fillStyle = '#ffffff';
-  ctx.font = `bold ${Math.round(radius * 1.1)}px system-ui, sans-serif`;
+  ctx.font = `bold ${Math.round(radius * 1.05)}px system-ui, -apple-system, sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(String(number), point.x, point.y);
