@@ -12,6 +12,14 @@ Built with **Electron**, **React 18**, and **TypeScript**, powered by a high-per
 [![Tests](https://img.shields.io/badge/tests-95%20passed%20%7C%2027%20suites-success.svg)]()
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)]()
 
+<p align="center">
+  <a href="https://github.com/naina-04/Screen-Canvas/releases/download/v1.2.0/ScreenCanvas-1.2.0.exe">
+    <img src="https://img.shields.io/badge/⚡_Direct_Download-ScreenCanvas_v1.2.0_for_Windows_(.exe)-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Direct Download for Windows" />
+  </a>
+</p>
+
+> 💾 **[Click here to directly download ScreenCanvas-1.2.0.exe](https://github.com/naina-04/Screen-Canvas/releases/download/v1.2.0/ScreenCanvas-1.2.0.exe)** *(76.3 MB Standalone Portable — No installation required, simply download and run)*
+
 [Features](#-key-features) • [Installation](#-installation--getting-started) • [Shortcuts](#-complete-keyboard-shortcuts-reference) • [Architecture](#-architecture--design) • [Toolbar Navigation](#-scrollable-toolbar--smart-navigation) • [Roadmap](#-roadmap)
 
 </div>
