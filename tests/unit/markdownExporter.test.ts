@@ -11,7 +11,7 @@ describe('Markdown Exporter Engine', () => {
     });
 
     expect(md).toContain('# 📊 Presentation Deck Summary: Q3 Product Demo');
-    expect(md).toContain('Total Slides: 4');
-    expect(md).toContain('Total Annotations & Drawings: 28');
+    expect(md).toContain('**Total Slides**: 4');
+    expect(md).toContain('**Total Annotations & Drawings**: 28');
   });
 });
